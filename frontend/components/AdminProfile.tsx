@@ -18,7 +18,7 @@ const AdminProfile: React.FC = () => {
     try {
       await api.updateCredentials(currentPassword, newUsername, newPassword);
       setMessage('Credentials updated successfully');
-      setTimeout(() => logout(), 2000); // Logout after 2 seconds to show message
+      setTimeout(() => logout(), 1000); // Logout after 2 seconds to show message
     } catch (error: any) {
       setMessage(error.message || 'Update failed');
     }
@@ -41,23 +41,21 @@ const AdminProfile: React.FC = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">New Username</label>
+            <label className="block text-sm font-medium mb-2">New Username (optional)</label>
             <input
               type="text"
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
               className="w-full p-2 border rounded"
-              required
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">New Password</label>
+            <label className="block text-sm font-medium mb-2">New Password (optional)</label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full p-2 border rounded"
-              required
             />
           </div>
           <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-4">

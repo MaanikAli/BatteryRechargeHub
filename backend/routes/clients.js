@@ -1,5 +1,6 @@
 const express = require('express');
 const Client = require('../models/Client.js');
+const Transaction = require('../models/Transaction.js');
 const VehicleType = require('../models/VehicleType.js'); // Import VehicleType model
 const { v4: uuidv4 } = require('uuid'); // Import uuid library
 const router = express.Router();
@@ -8,7 +9,17 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const clients = await Client.find();
-    res.json(clients);
+    const transactions = await Transaction.find();
+    const transactionsByClient = transactions.reduce((acc, tx) => {
+      if (!acc[tx.clientId]) acc[tx.clientId] = [];
+      acc[tx.clientId].push(tx);
+      return acc;
+    }, {});
+    const clientsWithTransactions = clients.map(client => ({
+      ...client.toObject(),
+      transactions: transactionsByClient[client.id] || []
+    }));
+    res.json(clientsWithTransactions);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -19,7 +30,9 @@ router.get('/:id', async (req, res) => {
   try {
     const client = await Client.findOne({ id: req.params.id });
     if (!client) return res.status(404).json({ message: 'Client not found' });
-    res.json(client);
+    const transactions = await Transaction.find({ clientId: req.params.id });
+    const clientWithTransactions = { ...client.toObject(), transactions };
+    res.json(clientWithTransactions);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -34,6 +47,7 @@ router.post('/', async (req, res) => {
     id: req.body.id || uuidv4(),
     ...req.body,
     vehicleTypeId: req.body.vehicleTypeId || 'defaultVehicleTypeId', // Replace with a valid default ID
+    createdAt: req.body.createdAt || new Date().toISOString(),
   };
 
   const client = new Client(clientData);
@@ -70,7 +84,9 @@ router.delete('/:id', async (req, res) => {
   try {
     const client = await Client.findOneAndDelete({ id: req.params.id });
     if (!client) return res.status(404).json({ message: 'Client not found' });
-    res.json({ message: 'Client deleted' });
+    // Delete all transactions associated with the client
+    await Transaction.deleteMany({ clientId: req.params.id });
+    res.json({ message: 'Client and associated transactions deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -85,8 +101,9 @@ router.post('/:id/transactions', async (req, res) => {
     const vehicleType = await VehicleType.findOne({ id: client.vehicleTypeId });
     if (!vehicleType) return res.status(404).json({ message: 'Vehicle type not found' });
 
-    const transaction = {
+    const transactionData = {
       id: req.body.id || uuidv4(),
+      clientId: req.params.id,
       timestamp: req.body.timestamp || new Date().toISOString(),
       vehicleTypeId: client.vehicleTypeId, // Automatically set from profile
       payableAmount: vehicleType.chargingFee, // Calculate payable amount
@@ -94,9 +111,9 @@ router.post('/:id/transactions', async (req, res) => {
       due: vehicleType.chargingFee - (req.body.cashReceived || 0), // Calculate due properly
     };
 
-    client.transactions.push(transaction);
-    await client.save();
-    res.status(201).json(client);
+    const transaction = new Transaction(transactionData);
+    await transaction.save();
+    res.status(201).json(transaction);
   } catch (err) {
     console.error('POST /api/clients/:id/transactions - Error:', err);
     res.status(500).json({ message: err.message });
@@ -106,23 +123,34 @@ router.post('/:id/transactions', async (req, res) => {
 // PUT update a transaction
 router.put('/:id/transactions/:txId', async (req, res) => {
   try {
+    console.log(`PUT /api/clients/${req.params.id}/transactions/${req.params.txId} - Request Body:`, req.body);
     const client = await Client.findOne({ id: req.params.id });
-    if (!client) return res.status(404).json({ message: 'Client not found' });
+    if (!client) {
+      console.log(`Client not found for id: ${req.params.id}`);
+      return res.status(404).json({ message: 'Client not found' });
+    }
 
-    const txIndex = client.transactions.findIndex(tx => tx.id === req.params.txId);
-    if (txIndex === -1) return res.status(404).json({ message: 'Transaction not found' });
+    const transaction = await Transaction.findOne({ id: req.params.txId, clientId: req.params.id });
+    if (!transaction) {
+      console.log(`Transaction not found for txId: ${req.params.txId}`);
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
 
     // Update the transaction
-    client.transactions[txIndex] = { ...client.transactions[txIndex], ...req.body };
+    Object.assign(transaction, req.body);
 
     // Recalculate due if cashReceived changed
     if (req.body.cashReceived !== undefined) {
-      client.transactions[txIndex].due = client.transactions[txIndex].payableAmount - req.body.cashReceived;
+      transaction.due = transaction.payableAmount - req.body.cashReceived;
     }
 
-    await client.save();
-    res.json(client);
+    transaction.modifiedAt = new Date();
+
+    await transaction.save();
+    console.log(`Transaction updated successfully for client ${req.params.id}`);
+    res.json(transaction);
   } catch (err) {
+    console.error(`Error updating transaction for client ${req.params.id}:`, err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -133,9 +161,10 @@ router.delete('/:id/transactions/:txId', async (req, res) => {
     const client = await Client.findOne({ id: req.params.id });
     if (!client) return res.status(404).json({ message: 'Client not found' });
 
-    client.transactions = client.transactions.filter(tx => tx.id !== req.params.txId);
-    await client.save();
-    res.json(client);
+    const transaction = await Transaction.findOneAndDelete({ id: req.params.txId, clientId: req.params.id });
+    if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
+
+    res.json({ message: 'Transaction deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

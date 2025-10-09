@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Client, VehicleType } from '../types';
 import { PlusIcon, UserIcon, SearchIcon, TrashIcon } from './Icons';
 import AddClientModal from './AddClientModal';
 import AddVehicleTypeModal from './AddVehicleTypeModal';
+import DeleteConrmationModal from './DeleteConfirmationModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 // The data structure for creating a new client, excluding server-generated fields
 type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
@@ -20,9 +23,11 @@ interface DashboardProps {
 // Pagination page size constant (used by both Dashboard and DashboardSkeleton)
 export const PAGE_SIZE = 5;
 
-const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType }) => {
+const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType }) => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [vehicleTypeToDelete, setVehicleTypeToDelete] = useState<VehicleType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<'name' | 'createdAt' | 'due'>('createdAt');
@@ -59,6 +64,23 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
       }, 0);
   }, [clients]);
 
+  const chartData = useMemo(() => {
+    return clients.map(client => ({
+      name: client.name.length > 10 ? client.name.substring(0, 10) + '...' : client.name,
+      due: client.transactions.reduce((sum, tx) => sum + tx.due, 0)
+    })).filter(item => item.due !== 0).slice(0, 10); // Top 10 with due > 0
+  }, [clients]);
+
+  const getBarColor = (due: number) => {
+    if (due >= 500) return '#dc2626'; // red-600
+    if (due >=200) return '#ea580c'; // orange-600
+    if (due >= 100) return '#16a34a'; // green-600
+    if (due < -1000) return '#2675dcff'; // red for large negative
+    return '#16a34a'; // green for small negative or zero
+  };
+
+
+
   const totalPages = Math.ceil(filteredClients.length / PAGE_SIZE);
   const paginatedClients = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -67,48 +89,67 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
   
   return (
     <>
-      <div className="space-y-6">
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="space-y-4">
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Client Dashboard</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage all your clients and their payments.</p>
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage clients & payments</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                       onClick={() => setIsAddVehicleModalOpen(true)}
-                      className="bg-sky-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-sky-600 transition-colors flex items-center gap-2"
+                      className="bg-sky-500 text-white px-3 py-1 rounded-md font-medium text-xs hover:bg-sky-600 transition-colors flex items-center gap-1"
                     >
-                      <PlusIcon />
-                      Vehicle Type
+                      <PlusIcon className="w-3 h-3" />
+                      Type
                     </button>
                     <button
                       onClick={() => setIsAddClientModalOpen(true)}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                      className="bg-indigo-600 text-white px-3 py-1 rounded-md font-medium text-xs hover:bg-indigo-700 transition-colors flex items-center gap-1"
                     >
-                      <PlusIcon />
-                      New Client
+                      <PlusIcon className="w-3 h-3" />
+                      Client
                     </button>
                 </div>
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md">
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Clients</h3>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
+                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
             </div>
-             <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md">
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Outstanding Due</h3>
-                <p className={`text-3xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
+             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
+                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Due</h3>
+                <p className={`text-2xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
             </div>
-             <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md">
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Vehicle Types</h3>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">{vehicleTypes.length}</p>
+             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
+                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Vehicle Types</h3>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{vehicleTypes.length}</p>
             </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
+        {chartData.length > 0 && (
+          <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Client Dues Overview</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`৳${value}`, 'Due']} />
+                <Bar dataKey="due">
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getBarColor(entry.due)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
             <div className="relative mb-4">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <SearchIcon />
@@ -150,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
                        className="p-4 border dark:border-slate-700 rounded-lg flex justify-between items-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <div className="flex items-center gap-4">
                         {client.imageUrl ? (
-                           <img src={client.imageUrl} alt={client.name} className="h-12 w-12 rounded-full object-cover" />
+                           <img src={client.imageUrl} alt={client.name} className="h-12 w-12 rounded-full object-cover" loading="lazy" />
                         ) : (
                            <div className="bg-slate-100 dark:bg-slate-700 p-3 rounded-full">
                                <UserIcon />
@@ -193,17 +234,22 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
             )}
         </div>
 
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Vehicle Types</h3>
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">Vehicle Types</h3>
             <div className="space-y-2">
               {vehicleTypes.map(vt => (
-                <div key={vt.id} className="flex justify-between items-center p-3 border dark:border-slate-700 rounded">
+                <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
                   <div>
-                    <p className="font-semibold">{vt.name}</p>
-                    <p className="text-sm text-slate-500">৳{vt.chargingFee}</p>
+                    <p className="font-medium text-sm">{vt.name}</p>
+                    <p className="text-xs text-slate-500">৳{vt.chargingFee}</p>
                   </div>
-                  <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 mr-2">Edit</button>
-                  <button onClick={() => onDeleteVehicleType(vt.id)} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"><TrashIcon /></button>
+                  <div className="flex gap-1">
+                    <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">Edit</button>
+                    <button onClick={() => {
+                      setVehicleTypeToDelete(vt);
+                      setIsDeleteModalOpen(true);
+                    }} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"><TrashIcon className="w-4 h-4" /></button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -229,9 +275,21 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
             }}
           />
       )}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => {
+          if (vehicleTypeToDelete) {
+            onDeleteVehicleType(vehicleTypeToDelete.id);
+          }
+          setIsDeleteModalOpen(false);
+        }}
+        title="Delete Vehicle Type"
+        message={`Are you sure you want to delete "${vehicleTypeToDelete?.name}"? This action cannot be undone.`}
+      />
     </>
   );
-};
+});
 
 // Skeleton loader for dashboard
 export const DashboardSkeleton: React.FC = () => (

@@ -9,13 +9,15 @@ import { AuthProvider, useAuth } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import Login from './components/Login';
 import AdminProfile from './components/AdminProfile';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { DashboardSkeleton } from './components/Dashboard';
 
 type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
 export type SyncStatus = 'offline' | 'syncing' | 'synced';
 
 const AppContent: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   // Background refresh interval (ms)
   const REFRESH_INTERVAL = 30000;
   // Track if background refresh is running
@@ -30,7 +32,6 @@ const AppContent: React.FC = () => {
     const cached = localStorage.getItem('vehicleTypes');
     return cached ? JSON.parse(cached) : [];
   });
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -128,19 +129,11 @@ const AppContent: React.FC = () => {
 
   // Optimistic UI update for adding client
   const addClient = async (clientData: AddClientData) => {
-    const optimisticClient: Client = {
-      id: `temp-${Date.now()}`,
-      ...clientData,
-      transactions: [],
-      createdAt: new Date().toISOString(),
-    };
-    setClients(prevClients => [...prevClients, optimisticClient]);
     try {
-      const newClient = await api.createClient(optimisticClient);
-      setClients(prevClients => prevClients.map(c => c.id === optimisticClient.id ? newClient : c));
+      const newClient = await api.createClient(clientData);
+      setClients(prevClients => [...prevClients, newClient]);
     } catch (error) {
       console.error('Failed to add client:', error);
-      setClients(prevClients => prevClients.filter(c => c.id !== optimisticClient.id));
     }
   };
 
@@ -156,6 +149,21 @@ const AppContent: React.FC = () => {
       );
     } catch (error) {
       console.error('Failed to update client', error);
+    }
+  };
+
+  // Optimistic UI update for deleting client
+  const deleteClient = async (clientId: string) => {
+    setClients(prevClients => prevClients.filter(client => client.id !== clientId));
+    try {
+      await api.deleteClient(clientId);
+    } catch (error) {
+      console.error('Failed to delete client', error);
+      // Revert optimistic update if failed
+      const cached = localStorage.getItem('clients');
+      if (cached) {
+        setClients(JSON.parse(cached));
+      }
     }
   };
 
@@ -177,12 +185,15 @@ const AppContent: React.FC = () => {
   };
 
   const selectedClient = useMemo(() => {
-    return clients.find(client => client.id === selectedClientId) || null;
-  }, [clients, selectedClientId]);
+    if (!id) return null;
+    return clients.find(client => client.id === id) || null;
+  }, [clients, id]);
 
   const handleSelectClient = (clientId: string) => {
-    console.log('Client selected:', clientId);
-    setSelectedClientId(clientId);
+    const client = clients.find(c => c.id === clientId);
+    if (client) {
+      navigate(`/client/${client.id}`);
+    }
   };
 
   const handleEditVehicleType = (vehicleType: VehicleType) => {
@@ -225,10 +236,31 @@ const AppContent: React.FC = () => {
     return <AdminProfile />;
   }
 
+  if (id && !selectedClient && isDataLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <Header
+          onAdminProfile={() => setShowAdminProfile(true)}
+        />
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Client not found</h2>
+            <p className="text-gray-600 dark:text-gray-400">The client you're looking for does not exist.</p>
+            <button
+              onClick={() => navigate('/home')}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Header
-        syncStatus={syncStatus}
         onAdminProfile={() => setShowAdminProfile(true)}
       />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -236,8 +268,9 @@ const AppContent: React.FC = () => {
           <ClientProfile
             client={selectedClient}
             vehicleTypes={vehicleTypes}
-            onBack={() => setSelectedClientId(null)}
+            onBack={() => navigate('/home')}
             onUpdateClient={updateClient}
+            onDeleteClient={deleteClient}
           />
         ) : (
           <>
@@ -281,8 +314,10 @@ const AppWithRoutes: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-        <Route path="/" element={<AppContent />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<AppContent />} />
+        <Route path="/client/:id" element={<AppContent />} />
         {/* Add more routes here, e.g. /profile, /settings, etc. */}
       </Routes>
     </Router>
