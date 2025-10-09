@@ -247,7 +247,7 @@ const AppContent: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Client not found</h2>
             <p className="text-gray-600 dark:text-gray-400">The client you're looking for does not exist.</p>
             <button
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/')}
               className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               Go to Dashboard
@@ -268,7 +268,7 @@ const AppContent: React.FC = () => {
           <ClientProfile
             client={selectedClient}
             vehicleTypes={vehicleTypes}
-            onBack={() => navigate('/home')}
+            onBack={() => navigate('/')}
             onUpdateClient={updateClient}
             onDeleteClient={deleteClient}
           />
@@ -314,10 +314,10 @@ const AppWithRoutes: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
-        <Route path="/" element={<Navigate to="/home" replace />} />
-        <Route path="/home" element={<AppContent />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/" element={<AppContent />} />
         <Route path="/client/:id" element={<AppContent />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
         {/* Add more routes here, e.g. /profile, /settings, etc. */}
       </Routes>
     </Router>
