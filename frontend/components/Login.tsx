@@ -15,7 +15,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('https://backend1-iota-sable.vercel.app/api/auth/login', {
+      const res = await fetch('https://backend1-z0ui.onrender.com/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

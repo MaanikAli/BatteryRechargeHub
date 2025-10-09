@@ -6,6 +6,7 @@ import ClientProfile from './components/ClientProfile';
 import Header from './components/Header';
 import EditVehicleTypeModal from './components/EditVehicleTypeModal';
 import { AuthProvider, useAuth } from './components/AuthContext';
+import { ThemeProvider } from './components/ThemeContext';
 import Login from './components/Login';
 import AdminProfile from './components/AdminProfile';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -225,7 +226,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Header
         syncStatus={syncStatus}
         onAdminProfile={() => setShowAdminProfile(true)}
@@ -290,9 +291,11 @@ const AppWithRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppWithRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppWithRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

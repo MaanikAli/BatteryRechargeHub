@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://backend1-iota-sable.vercel.app/api',
+  baseURL: 'https://backend1-z0ui.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
