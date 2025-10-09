@@ -186,7 +186,7 @@ const AppContent: React.FC = () => {
 
   const selectedClient = useMemo(() => {
     if (!name || !phone) return null;
-    return clients.find(client => client.name === decodeURIComponent(name) && client.phone === phone) || null;
+    return clients.find(client => client.name.trim().toLowerCase() === decodeURIComponent(name).trim().toLowerCase() && client.phone === phone) || null;
   }, [clients, name, phone]);
 
   const handleSelectClient = (clientId: string) => {
