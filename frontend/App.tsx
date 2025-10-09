@@ -16,7 +16,7 @@ type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
 export type SyncStatus = 'offline' | 'syncing' | 'synced';
 
 const AppContent: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { name, phone } = useParams<{ name: string, phone: string }>();
   const navigate = useNavigate();
   // Background refresh interval (ms)
   const REFRESH_INTERVAL = 30000;
@@ -185,14 +185,14 @@ const AppContent: React.FC = () => {
   };
 
   const selectedClient = useMemo(() => {
-    if (!id) return null;
-    return clients.find(client => client.id === id) || null;
-  }, [clients, id]);
+    if (!name || !phone) return null;
+    return clients.find(client => client.name === decodeURIComponent(name) && client.phone === phone) || null;
+  }, [clients, name, phone]);
 
   const handleSelectClient = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
     if (client) {
-      navigate(`/client/${client.id}`);
+      navigate(`/client/${encodeURIComponent(client.name)}/${client.phone}`);
     }
   };
 
@@ -236,7 +236,7 @@ const AppContent: React.FC = () => {
     return <AdminProfile />;
   }
 
-  if (id && !selectedClient && isDataLoaded) {
+  if ((name || phone) && !selectedClient && isDataLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <Header
@@ -316,7 +316,7 @@ const AppWithRoutes: React.FC = () => {
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/" element={<AppContent />} />
-        <Route path="/client/:id" element={<AppContent />} />
+        <Route path="/client/:name/:phone" element={<AppContent />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         {/* Add more routes here, e.g. /profile, /settings, etc. */}
       </Routes>
