@@ -17,11 +17,10 @@ interface ClientProfileProps {
 }
 
 const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]; onAddTransaction: (tx: Omit<Transaction, 'id'>) => void }> = ({ client, vehicleTypes, onAddTransaction }) => {
-    const [cashReceived, setCashReceived] = useState<string>('');
-    const [isSaving, setIsSaving] = useState(false);
-
     const vehicleType = vehicleTypes.find(vt => vt.id === client.vehicleTypeId);
     const payableAmount = vehicleType ? vehicleType.chargingFee : 0;
+    const [cashReceived, setCashReceived] = useState<string>(payableAmount.toString());
+    const [isSaving, setIsSaving] = useState(false);
     const cash = Number(cashReceived) || 0;
     const due = payableAmount - cash;
 
@@ -36,7 +35,7 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
             cashReceived: cash,
             due,
         });
-        setCashReceived('');
+        setCashReceived(payableAmount.toString());
         setTimeout(() => setIsSaving(false), 2000);
     };
 
