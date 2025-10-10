@@ -73,8 +73,8 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
 
   const getBarColor = (due: number) => {
     if (due >= 500) return '#dc2626'; // red-600
-    if (due >=200) return '#ea580c'; // orange-600
-    if (due >= 100) return '#16a34a'; // green-600
+    if (due >=100) return '#ea580c'; // orange-600
+    if (due >= 50) return '#16a34a'; // green-600
     if (due < -1000) return '#2675dcff'; // red for large negative
     return '#16a34a'; // green for small negative or zero
   };
