@@ -1,8 +1,7 @@
-
-
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -15,20 +14,15 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('https://backend1-z0ui.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (res.ok && data.token) {
+      const data = await api.login(username, password);
+      if (data.token) {
         login(data.token);
         navigate('/');
       } else {
-        setError(data.message || 'Invalid credentials');
+        setError('Invalid credentials');
       }
-    } catch {
-      setError('Login failed');
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Login failed');
     }
   };
 

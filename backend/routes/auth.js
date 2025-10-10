@@ -32,14 +32,22 @@ router.put('/update', auth, async (req, res) => {
     const isMatch = await bcrypt.compare(currentPassword, admin.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid current password' });
 
-    if (newUsername && newUsername !== admin.username) {
+    let updated = false;
+
+    if (newUsername && newUsername.trim() !== '' && newUsername !== admin.username) {
       const existingAdmin = await Admin.findOne({ username: newUsername });
       if (existingAdmin) return res.status(400).json({ message: 'Username already taken' });
       admin.username = newUsername;
+      updated = true;
     }
 
-    if (newPassword) {
+    if (newPassword && newPassword.trim() !== '') {
       admin.password = await bcrypt.hash(newPassword, 10);
+      updated = true;
+    }
+
+    if (!updated) {
+      return res.status(400).json({ message: 'No changes provided' });
     }
 
     await admin.save();

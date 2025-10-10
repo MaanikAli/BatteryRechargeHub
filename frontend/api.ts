@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://backend1-z0ui.onrender.com/api',
+  baseURL: 'https://brh-nu.vercel.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
