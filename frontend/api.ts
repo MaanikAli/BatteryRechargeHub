@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://brh-nu.vercel.app/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002/api',
   headers: {
     'Content-Type': 'application/json',
   },
