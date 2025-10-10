@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://brh-nu.vercel.app/api',
+  baseURL: 'https://battery-recharge-hub.vercel.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
