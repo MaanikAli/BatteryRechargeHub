@@ -20,7 +20,8 @@ const AdminProfile: React.FC = () => {
       setMessage('Credentials updated successfully');
       setTimeout(() => logout(), 1000); // Logout after 2 seconds to show message
     } catch (error: any) {
-      setMessage(error.message || 'Update failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Update failed';
+      setMessage(errorMessage);
     }
   };
 
