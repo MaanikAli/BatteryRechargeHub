@@ -25,6 +25,67 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET the latest transaction
+router.get('/transactions/latest', async (req, res) => {
+  try {
+    const latestTransaction = await Transaction.findOne().sort({ timestamp: -1 });
+    if (!latestTransaction) return res.status(404).json({ message: 'No transactions found' });
+
+    const client = await Client.findOne({ id: latestTransaction.clientId });
+    const transactionWithClient = {
+      ...latestTransaction.toObject(),
+      clientName: client ? client.name : 'Unknown'
+    };
+    res.json(transactionWithClient);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET all transactions with pagination and sort
+router.get('/transactions', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sortBy = req.query.sortBy || 'timestamp';
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+    const skip = (page - 1) * limit;
+
+    const totalTransactions = await Transaction.countDocuments();
+    const transactions = await Transaction.find()
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(limit);
+
+    // Manually add clientName and type
+    const transactionsWithClientName = await Promise.all(transactions.map(async tx => {
+      const client = await Client.findOne({ id: tx.clientId });
+      let type = 'Previous Due';
+      if (tx.vehicleTypeId) {
+        const vehicleType = await VehicleType.findOne({ id: tx.vehicleTypeId });
+        type = vehicleType ? vehicleType.name : 'Unknown';
+      }
+      return {
+        ...tx.toObject(),
+        clientName: client ? client.name : 'Unknown',
+        type
+      };
+    }));
+
+    const totalPages = Math.ceil(totalTransactions / limit);
+
+    res.json({
+      transactions: transactionsWithClientName,
+      currentPage: page,
+      totalPages,
+      totalTransactions
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET a single client
 router.get('/:id', async (req, res) => {
   try {

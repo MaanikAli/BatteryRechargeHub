@@ -7,6 +7,7 @@ interface DeleteConfirmationModalProps {
   onConfirm: () => void;
   title?: string;
   message?: string;
+  confirmButtonText?: string;
 }
 
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
@@ -14,7 +15,8 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   onClose,
   onConfirm,
   title = "Confirm Deletion",
-  message = "Are you sure you want to delete this item? This action cannot be undone."
+  message = "Are you sure you want to delete this item? This action cannot be undone.",
+  confirmButtonText = "Delete"
 }) => {
   if (!isOpen) return null;
 
@@ -49,7 +51,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
             }}
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700"
           >
-            Delete
+            {confirmButtonText}
           </button>
         </div>
       </div>

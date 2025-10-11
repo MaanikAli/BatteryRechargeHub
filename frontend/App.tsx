@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Client, VehicleType } from './types';
+import { Client, VehicleType, Transaction } from './types';
 import { api } from './api';
 import Dashboard from './components/Dashboard';
 import ClientProfile from './components/ClientProfile';
@@ -32,6 +32,14 @@ const AppContent: React.FC = () => {
     const cached = localStorage.getItem('vehicleTypes');
     return cached ? JSON.parse(cached) : [];
   });
+  const [transactionsData, setTransactionsData] = useState<{
+    transactions: Transaction[];
+    currentPage: number;
+    totalPages: number;
+    totalTransactions: number;
+  } | null>(null);
+  const [transactionsSortKey, setTransactionsSortKey] = useState('timestamp');
+  const [transactionsSortOrder, setTransactionsSortOrder] = useState('desc');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -93,15 +101,18 @@ const AppContent: React.FC = () => {
     const loadData = async () => {
       try {
         setLoadError(null);
-        // Fetch clients and vehicle types in parallel
-        const [clientsData, vehicleTypesData] = await Promise.all([
+        // Fetch clients, vehicle types, and transactions in parallel
+        const [clientsData, vehicleTypesData, transactionsData] = await Promise.all([
           api.getClients(),
-          api.getVehicleTypes()
+          api.getVehicleTypes(),
+          api.getTransactions({ page: 1, limit: 10, sortBy: 'timestamp', sortOrder: 'desc' }).catch(() => null) // Ignore error if no transactions
         ]);
         console.log('Clients fetched:', clientsData);
         console.log('Vehicle types fetched:', vehicleTypesData);
+        console.log('Transactions fetched:', transactionsData);
         setClients(clientsData);
         setVehicleTypes(vehicleTypesData);
+        setTransactionsData(transactionsData);
         setIsDataLoaded(true);
         console.log('Data loaded successfully.');
       } catch (error) {
@@ -226,6 +237,26 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleChangeTransactionsPage = async (page: number) => {
+    try {
+      const newTransactionsData = await api.getTransactions({ page, limit: 10, sortBy: transactionsSortKey, sortOrder: transactionsSortOrder });
+      setTransactionsData(newTransactionsData);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+    }
+  };
+
+  const handleChangeTransactionsSort = async (sortKey: string, sortOrder: string) => {
+    setTransactionsSortKey(sortKey);
+    setTransactionsSortOrder(sortOrder);
+    try {
+      const newTransactionsData = await api.getTransactions({ page: 1, limit: 10, sortBy: sortKey, sortOrder });
+      setTransactionsData(newTransactionsData);
+    } catch (error) {
+      console.error('Failed to fetch sorted transactions:', error);
+    }
+  };
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -282,6 +313,11 @@ const AppContent: React.FC = () => {
               onAddVehicleType={addVehicleType}
               onEditVehicleType={handleEditVehicleType}
               onDeleteVehicleType={deleteVehicleType}
+              transactionsData={transactionsData}
+              onChangeTransactionsPage={handleChangeTransactionsPage}
+              onChangeTransactionsSort={handleChangeTransactionsSort}
+              transactionsSortKey={transactionsSortKey}
+              transactionsSortOrder={transactionsSortOrder}
             />
             {(!isDataLoaded || isRefreshing) && (
               <div className="flex items-center mt-4">

@@ -66,6 +66,7 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
     const payableAmount = vehicleType ? vehicleType.chargingFee : 0;
     const [cashReceived, setCashReceived] = useState<string>(payableAmount.toString());
     const [isSaving, setIsSaving] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
     const cash = Number(cashReceived) || 0;
     const due = payableAmount - cash;
 
@@ -76,8 +77,17 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSaving || hasTodayTransaction) return;
+        if (isSaving) return;
+        if (hasTodayTransaction) {
+            setShowConfirmation(true);
+            return;
+        }
+        await proceedWithTransaction();
+    };
+
+    const proceedWithTransaction = async () => {
         setIsSaving(true);
+        setShowConfirmation(false);
         await onAddTransaction({
             timestamp: new Date().toISOString(),
             vehicleTypeId: client.vehicleTypeId, // Automatically set from profile
@@ -106,14 +116,13 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
             </div>
             <div>
                 <label htmlFor="cashReceived" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cash Received</label>
-                <input 
-                    type="number" 
-                    id="cashReceived" 
-                    value={cashReceived} 
-                    onChange={e => setCashReceived(e.target.value)} 
-                    placeholder="0" 
-                    disabled={hasTodayTransaction}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm ${hasTodayTransaction ? 'bg-slate-100 dark:bg-slate-600 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-indigo-500 focus:border-indigo-500'}`} 
+                <input
+                    type="number"
+                    id="cashReceived"
+                    value={cashReceived}
+                    onChange={e => setCashReceived(e.target.value)}
+                    placeholder="0"
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
             </div>
             <div className="flex justify-between items-center text-sm p-3 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg">
@@ -122,20 +131,30 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
             </div>
             {hasTodayTransaction && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg text-center">
-                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Today transaction made</p>
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Today transaction already made. Proceed with confirmation.</p>
                 </div>
             )}
             <button
                 type="submit"
-                disabled={isSaving || hasTodayTransaction}
+                disabled={isSaving}
                 className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
-                    isSaving || hasTodayTransaction
-                        ? 'bg-slate-400 cursor-not-allowed text-white'
+                    isSaving
+                        ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
             >
                 {isSaving ? 'Saving...' : 'Save Transaction'}
             </button>
+            {showConfirmation && (
+                <DeleteConfirmationModal
+                    isOpen={showConfirmation}
+                    onClose={() => setShowConfirmation(false)}
+                    onConfirm={proceedWithTransaction}
+                    title="Confirm Additional Transaction"
+                    message="A transaction has already been made today. Are you sure you want to add another one?"
+                    confirmButtonText="OK"
+                />
+            )}
         </form>
     );
 };
@@ -337,12 +356,12 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><ReceiptIcon /> Transaction History</h3>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <label className="font-medium text-slate-700 dark:text-slate-300">Sort by:</label>
+                        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                            <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sort by:</span>
                             <select
                                 value={sortKey}
                                 onChange={e => setSortKey(e.target.value as 'timestamp' | 'payableAmount' | 'cashReceived' | 'due')}
-                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                                className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                             >
                                 <option value="timestamp">Date</option>
                                 <option value="payableAmount">Payable Amount</option>
@@ -352,9 +371,9 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                             <button
                                 type="button"
                                 onClick={() => setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
-                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                                className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                             >
-                                {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+                                {sortOrder === 'asc' ? '↑ Asc' : '↓ Desc'}
                             </button>
                         </div>
                         <div className="overflow-x-auto">
@@ -363,8 +382,8 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                   <tr>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Type</th>
-                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Payable</th>
-                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Cash</th>
+                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider hidden sm:table-cell">Payable</th>
+                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider hidden sm:table-cell">Cash</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Due</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Actions</th>
                                   </tr>
@@ -376,12 +395,12 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                               {new Date(tx.timestamp).toLocaleString()}
                                           </td>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                              {tx.vehicleTypeId ? vehicleTypes.find(vt => vt.id === tx.vehicleTypeId)?.name || 'N/A' : 'Previous Due'}
+                                              {tx.vehicleTypeId ? vehicleTypes.find(vt => vt.id === tx.vehicleTypeId)?.name || `Unknown (ID: ${tx.vehicleTypeId})` : 'Previous Due'}
                                           </td>
-                                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-200">
+                                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-200 hidden sm:table-cell">
                                               ৳{tx.payableAmount.toLocaleString()}
                                           </td>
-                                          <td className="px-4 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400">
+                                          <td className="px-4 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400 hidden sm:table-cell">
                                               ৳{tx.cashReceived.toLocaleString()}
                                           </td>
                                           <td className={`px-4 py-4 whitespace-nowrap text-sm font-bold ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500'}`}>

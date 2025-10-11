@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import { Client, VehicleType } from '../types';
+import { Client, VehicleType, Transaction } from '../types';
 import { PlusIcon, UserIcon, SearchIcon, TrashIcon } from './Icons';
 import AddClientModal from './AddClientModal';
 import AddVehicleTypeModal from './AddVehicleTypeModal';
@@ -12,17 +12,27 @@ type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
 interface DashboardProps {
   clients: Client[];
   vehicleTypes: VehicleType[];
+  transactionsData: {
+    transactions: Transaction[];
+    currentPage: number;
+    totalPages: number;
+    totalTransactions: number;
+  } | null;
   onSelectClient: (clientId: string) => void;
   onAddClient: (clientData: AddClientData) => void;
   onAddVehicleType: (name: string, chargingFee: number) => void;
   onEditVehicleType: (vehicleType: VehicleType) => void;
   onDeleteVehicleType: (id: string) => void;
+  onChangeTransactionsPage: (page: number) => void;
+  onChangeTransactionsSort: (sortKey: string, sortOrder: string) => void;
+  transactionsSortKey: string;
+  transactionsSortOrder: string;
 }
 
 // Pagination page size constant (used by both Dashboard and DashboardSkeleton)
 export const PAGE_SIZE = 10;
 
-const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType }) => {
+const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, transactionsData, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType, onChangeTransactionsPage, onChangeTransactionsSort, transactionsSortKey, transactionsSortOrder }) => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -33,9 +43,11 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const [showDuesOverview, setShowDuesOverview] = useState(true);
+  const [showTransactions, setShowTransactions] = useState(true);
   const [period, setPeriod] = useState<'all' | 'today' | '3d' | '7d' | '30d' | '1y' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [transactionsSearchTerm, setTransactionsSearchTerm] = useState('');
 
   const now = new Date();
   const getDateRange = () => {
@@ -107,12 +119,12 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
     return dateFilteredClients.map(client => ({
       name: client.name.length > 10 ? client.name.substring(0, 10) + '...' : client.name,
       due: client.transactions.reduce((sum, tx) => sum + tx.due, 0)
-    })).filter(item => item.due !== 0).slice(0, 10); // Top 10 with due > 0
+    })).filter(item => item.due > 0).sort((a, b) => b.due - a.due).slice(0, 50); // Top 10 with highest due > 0
   }, [dateFilteredClients]);
 
   const getBarColor = (due: number) => {
     if (due >= 500) return '#dc2626'; // red-600
-    if (due >=100) return '#ea580c'; // orange-600
+    if (due >=100) return '#ffda05ee'; // orange-600
     if (due >= 50) return '#16a34a'; // green-600
     if (due < -1000) return '#2675dcff'; // red for large negative
     return '#16a34a'; // green for small negative or zero
@@ -125,6 +137,13 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
     const start = (currentPage - 1) * PAGE_SIZE;
     return filteredClients.slice(start, start + PAGE_SIZE);
   }, [filteredClients, currentPage]);
+
+  const filteredTransactions = useMemo(() => {
+    if (!transactionsData) return [];
+    return transactionsData.transactions.filter(tx =>
+      tx.clientName.toLowerCase().includes(transactionsSearchTerm.toLowerCase())
+    );
+  }, [transactionsData, transactionsSearchTerm]);
   
   return (
     <>
@@ -190,7 +209,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
@@ -203,10 +222,34 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Received</h3>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">৳{totalReceived.toLocaleString()}</p>
             </div>
-             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Vehicle Types</h3>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{vehicleTypes.length}</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+            <h3
+                className="text-base font-bold text-slate-900 dark:text-white cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-3"
+                onClick={() => setShowVehicleTypes(!showVehicleTypes)}
+            >
+                Vehicle Types ({vehicleTypes.length})
+            </h3>
+            {showVehicleTypes && (
+                <div className="space-y-2">
+              {vehicleTypes.map(vt => (
+                <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
+                  <div>
+                    <p className="font-medium text-sm">{vt.name}</p>
+                    <p className="text-xs text-slate-500">৳{vt.chargingFee}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">Edit</button>
+                    <button onClick={() => {
+                      setVehicleTypeToDelete(vt);
+                      setIsDeleteModalOpen(true);
+                    }} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"><TrashIcon className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
             </div>
+            )}
         </div>
 
         {chartData.length > 0 && (
@@ -252,12 +295,12 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
                 />
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-4">
-              <label className="font-medium text-slate-700 dark:text-slate-300">Sort by:</label>
+            <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sort by:</span>
               <select
                 value={sortKey}
                 onChange={e => setSortKey(e.target.value as 'name' | 'createdAt' | 'due')}
-                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               >
                 <option value="createdAt">Created Date</option>
                 <option value="name">Name</option>
@@ -266,9 +309,9 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
               <button
                 type="button"
                 onClick={() => setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
-                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               >
-                {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+                {sortOrder === 'asc' ? '↑ Asc' : '↓ Desc'}
               </button>
             </div>
 
@@ -323,36 +366,107 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
             )}
         </div>
 
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+        {transactionsData && (
+          <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
             <div className="flex justify-between items-center mb-3">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Vehicle Types</h3>
-                <button
-                    onClick={() => setShowVehicleTypes(!showVehicleTypes)}
-                    className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-600"
-                >
-                    {showVehicleTypes ? 'Hide' : 'Show'}
-                </button>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Transactions</h3>
+              <button
+                onClick={() => setShowTransactions(!showTransactions)}
+                className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+              >
+                {showTransactions ? 'Hide' : 'Show'}
+              </button>
             </div>
-            {showVehicleTypes && (
-                <div className="space-y-2">
-              {vehicleTypes.map(vt => (
-                <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
-                  <div>
-                    <p className="font-medium text-sm">{vt.name}</p>
-                    <p className="text-xs text-slate-500">৳{vt.chargingFee}</p>
+            {showTransactions && (
+              <>
+                <div className="relative mb-4">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <SearchIcon />
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">Edit</button>
-                    <button onClick={() => {
-                      setVehicleTypeToDelete(vt);
-                      setIsDeleteModalOpen(true);
-                    }} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"><TrashIcon className="w-4 h-4" /></button>
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search by client name..."
+                    value={transactionsSearchTerm}
+                    onChange={(e) => setTransactionsSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sort by:</span>
+                  <select
+                    value={transactionsSortKey}
+                    onChange={e => onChangeTransactionsSort(e.target.value, transactionsSortOrder)}
+                    className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="timestamp">Date</option>
+                    <option value="amount">Amount</option>
+                    <option value="due">Due</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => onChangeTransactionsSort(transactionsSortKey, transactionsSortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  >
+                    {transactionsSortOrder === 'asc' ? '↑ Asc' : '↓ Desc'}
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payable</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cash</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Due</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredTransactions.length > 0 ? filteredTransactions.map((tx, index) => (
+                        <tr key={tx.id} className={`${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{tx.clientName}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(tx.timestamp).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{tx.type}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.payableAmount.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.cashReceived.toLocaleString()}</td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            ৳{tx.due.toLocaleString()}
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No transactions found.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {transactionsData.totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2">
+                    <button
+                      className="px-3 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-semibold disabled:opacity-50"
+                      onClick={() => onChangeTransactionsPage(transactionsData.currentPage - 1)}
+                      disabled={transactionsData.currentPage === 1}
+                    >
+                      Prev
+                    </button>
+                    <span className="font-bold text-slate-700 dark:text-white">
+                      Page {transactionsData.currentPage} of {transactionsData.totalPages}
+                    </span>
+                    <button
+                      className="px-3 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-semibold disabled:opacity-50"
+                      onClick={() => onChangeTransactionsPage(transactionsData.currentPage + 1)}
+                      disabled={transactionsData.currentPage === transactionsData.totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-        </div>
+          </div>
+        )}
       </div>
 
       {isAddClientModalOpen && (

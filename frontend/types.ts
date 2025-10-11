@@ -12,6 +12,7 @@ export interface Transaction {
   payableAmount: number;
   cashReceived: number;
   due: number;
+  clientName?: string; // Added for latest transaction display
 }
 
 export interface Client {
