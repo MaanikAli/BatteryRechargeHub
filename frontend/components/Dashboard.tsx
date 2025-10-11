@@ -20,7 +20,7 @@ interface DashboardProps {
 }
 
 // Pagination page size constant (used by both Dashboard and DashboardSkeleton)
-export const PAGE_SIZE = 5;
+export const PAGE_SIZE = 10;
 
 const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType }) => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
@@ -33,17 +33,22 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const [showDuesOverview, setShowDuesOverview] = useState(true);
-  const [period, setPeriod] = useState<'all' | '1d' | '7d' | '30d' | '1y' | 'custom'>('all');
+  const [period, setPeriod] = useState<'all' | 'today' | '3d' | '7d' | '30d' | '1y' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   const now = new Date();
   const getDateRange = () => {
     if (period === 'all') return { start: null, end: null };
+    if (period === 'today') {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      return { start: today, end: tomorrow };
+    }
     if (period === 'custom') {
       return { start: startDate ? new Date(startDate) : null, end: endDate ? new Date(endDate + 'T23:59:59.999') : null };
     }
-    const days = period === '1d' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : 365;
+    const days = period === '3d' ? 3 : period === '7d' ? 7 : period === '30d' ? 30 : 365;
     const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     return { start, end: now };
   };
@@ -158,7 +163,8 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
               className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
             >
               <option value="all">All Time</option>
-              <option value="1d">Last 1 Day</option>
+              <option value="today">Today</option>
+              <option value="3d">Last 3 Days</option>
               <option value="7d">Last 7 Days</option>
               <option value="30d">Last 30 Days</option>
               <option value="1y">Last 1 Year</option>
