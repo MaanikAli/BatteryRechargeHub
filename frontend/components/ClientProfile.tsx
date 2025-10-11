@@ -140,6 +140,14 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         return client.transactions.reduce((acc, tx) => acc + tx.due, 0);
     }, [client.transactions]);
 
+    const totalPayment = useMemo(() => {
+        return client.transactions.reduce((acc, tx) => acc + tx.cashReceived, 0);
+    }, [client.transactions]);
+
+    const rechargeDays = useMemo(() => {
+        return client.transactions.filter(tx => tx.vehicleTypeId !== null).length;
+    }, [client.transactions]);
+
     const sortedTransactions = useMemo(() => {
         let sorted = [...client.transactions];
         sorted = sorted.sort((a, b) => {
@@ -160,14 +168,11 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         return sorted;
     }, [client.transactions, sortKey, sortOrder]);
 
-    const lastMonthChartData = useMemo(() => {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const recentTx = client.transactions
-            .filter(tx => new Date(tx.timestamp) >= thirtyDaysAgo)
+    const chartData = useMemo(() => {
+        const sortedTx = client.transactions
             .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         let cumulativeDue = 0;
-        return recentTx.map(tx => {
+        return sortedTx.map(tx => {
             cumulativeDue += tx.due;
             return {
                 date: new Date(tx.timestamp).toLocaleDateString(),
@@ -290,30 +295,27 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                             </div>
                         </div>
                     </div>
-                     <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex justify-between items-center">
-                        <span className="font-semibold text-red-800 dark:text-red-300">Total Outstanding Due</span>
-                        <span className="text-2xl font-bold text-red-600 dark:text-red-400">৳{totalDue.toLocaleString()}</span>
+                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-center">
+                            <h4 className="font-semibold text-green-800 dark:text-green-300">Total Payment</h4>
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">৳{totalPayment.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-center">
+                            <h4 className="font-semibold text-red-800 dark:text-red-300">Total Due</h4>
+                            <p className="text-2xl font-bold text-red-600 dark:text-red-400">৳{totalDue.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-center">
+                            <h4 className="font-semibold text-blue-800 dark:text-blue-300">Recharge Days</h4>
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{rechargeDays}</p>
+                        </div>
                     </div>
-                    <div className="mt-4 flex justify-center">
-                        <button
-                            onClick={() => setShowAddPreviousDue(!showAddPreviousDue)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                        >
-                            {showAddPreviousDue ? 'Hide' : 'Show'} Add Previous Due
-                        </button>
-                    </div>
+
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1">
                         <AddTransactionForm client={client} vehicleTypes={vehicleTypes} onAddTransaction={handleAddTransaction} />
                     </div>
-
-                    {showAddPreviousDue && (
-                        <div className="lg:col-span-1">
-                            <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
-                        </div>
-                    )}
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><ReceiptIcon /> Transaction History</h3>
@@ -388,11 +390,11 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                     </div>
                 </div>
 
-                {lastMonthChartData.length > 0 && (
+                {chartData.length > 0 && (
                     <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Due Trend (Last 30 Days)</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Due Trend (All Time)</h3>
                         <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={lastMonthChartData}>
+                            <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="date" />
                                 <YAxis />
@@ -401,6 +403,19 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
+                )}
+
+                <div className="flex justify-center">
+                    <button
+                        onClick={() => setShowAddPreviousDue(!showAddPreviousDue)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                        {showAddPreviousDue ? 'Hide' : 'Show'} Add Previous Due
+                    </button>
+                </div>
+
+                {showAddPreviousDue && (
+                    <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
                 )}
             </div>
             {isEditModalOpen && (
