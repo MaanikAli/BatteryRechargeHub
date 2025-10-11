@@ -69,9 +69,14 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
     const cash = Number(cashReceived) || 0;
     const due = payableAmount - cash;
 
+    const today = new Date().toISOString().split('T')[0];
+    const hasTodayTransaction = useMemo(() => {
+        return client.transactions.some(tx => tx.timestamp.startsWith(today));
+    }, [client.transactions]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSaving) return;
+        if (isSaving || hasTodayTransaction) return;
         setIsSaving(true);
         await onAddTransaction({
             timestamp: new Date().toISOString(),
@@ -101,18 +106,31 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
             </div>
             <div>
                 <label htmlFor="cashReceived" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cash Received</label>
-                <input type="number" id="cashReceived" value={cashReceived} onChange={e => setCashReceived(e.target.value)} placeholder="0" className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                <input 
+                    type="number" 
+                    id="cashReceived" 
+                    value={cashReceived} 
+                    onChange={e => setCashReceived(e.target.value)} 
+                    placeholder="0" 
+                    disabled={hasTodayTransaction}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm ${hasTodayTransaction ? 'bg-slate-100 dark:bg-slate-600 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-indigo-500 focus:border-indigo-500'}`} 
+                />
             </div>
             <div className="flex justify-between items-center text-sm p-3 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg">
                 <span className="font-medium text-indigo-800 dark:text-indigo-300">Current Due:</span>
                 <span className={`font-bold text-lg ${due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>৳{due.toLocaleString()}</span>
             </div>
+            {hasTodayTransaction && (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg text-center">
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Today transaction made</p>
+                </div>
+            )}
             <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || hasTodayTransaction}
                 className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
-                    isSaving
-                        ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
+                    isSaving || hasTodayTransaction
+                        ? 'bg-slate-400 cursor-not-allowed text-white'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
             >
