@@ -71,7 +71,7 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
 
     const today = new Date().toISOString().split('T')[0];
     const hasTodayTransaction = useMemo(() => {
-        return client.transactions.some(tx => tx.timestamp.startsWith(today));
+        return client.transactions.some(tx => tx.timestamp.startsWith(today) && tx.vehicleTypeId !== null);
     }, [client.transactions]);
 
     const handleSubmit = async (e: React.FormEvent) => {
