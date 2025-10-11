@@ -16,6 +16,51 @@ interface ClientProfileProps {
   onDeleteClient: (clientId: string) => void;
 }
 
+const AddPreviousDueForm: React.FC<{ onAddPreviousDue: (amount: number) => void }> = ({ onAddPreviousDue }) => {
+    const [amount, setAmount] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const dueAmount = Number(amount);
+        if (isNaN(dueAmount) || dueAmount <= 0 || isSaving) return;
+        setIsSaving(true);
+        await onAddPreviousDue(dueAmount);
+        setAmount('');
+        setTimeout(() => setIsSaving(false), 2000);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Add Previous Due</h3>
+            <div>
+                <label htmlFor="previousDueAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Previous Due Amount</label>
+                <input
+                    type="number"
+                    id="previousDueAmount"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0"
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    min="0"
+                    step="0.01"
+                />
+            </div>
+            <button
+                type="submit"
+                disabled={isSaving || !amount || Number(amount) <= 0}
+                className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
+                    isSaving
+                        ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+            >
+                {isSaving ? 'Adding...' : 'Add Previous Due'}
+            </button>
+        </form>
+    );
+};
+
 const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]; onAddTransaction: (tx: Omit<Transaction, 'id'>) => void }> = ({ client, vehicleTypes, onAddTransaction }) => {
     const vehicleType = vehicleTypes.find(vt => vt.id === client.vehicleTypeId);
     const payableAmount = vehicleType ? vehicleType.chargingFee : 0;
@@ -141,6 +186,16 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         }
     };
 
+    const handleAddPreviousDue = async (amount: number) => {
+        try {
+            const newTransaction = await api.addTransaction(client.id, { timestamp: new Date().toISOString(), cashReceived: 0, payableAmount: amount, vehicleTypeId: null });
+            const updatedClient = { ...client, transactions: [...client.transactions, newTransaction] };
+            onUpdateClient(updatedClient);
+        } catch (error) {
+            console.error('Failed to add previous due:', error);
+        }
+    };
+
     const handleUpdateTransaction = async (txId: string, updates: Partial<Transaction>) => {
         try {
             const updatedTransaction = await api.updateTransaction(client.id, txId, updates);
@@ -240,9 +295,13 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div className="lg:col-span-1">
                         <AddTransactionForm client={client} vehicleTypes={vehicleTypes} onAddTransaction={handleAddTransaction} />
+                    </div>
+
+                    <div className="lg:col-span-1">
+                        <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
                     </div>
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
@@ -272,6 +331,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                               <thead className="bg-slate-50 dark:bg-slate-700/50">
                                   <tr>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
+                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Type</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Payable</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Cash</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Due</th>
@@ -283,6 +343,9 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                       <tr key={tx.id}>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                               {new Date(tx.timestamp).toLocaleString()}
+                                          </td>
+                                          <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                              {tx.vehicleTypeId ? vehicleTypes.find(vt => vt.id === tx.vehicleTypeId)?.name || 'N/A' : 'Previous Due'}
                                           </td>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-200">
                                               ৳{tx.payableAmount.toLocaleString()}
@@ -305,7 +368,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                       </tr>
                                   )) : (
                                     <tr>
-                                      <td colSpan={5} className="text-center py-10 text-slate-500 dark:text-slate-400">No transactions yet.</td>
+                                      <td colSpan={6} className="text-center py-10 text-slate-500 dark:text-slate-400">No transactions yet.</td>
                                     </tr>
                                   )}
                               </tbody>

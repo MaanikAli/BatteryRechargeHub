@@ -8,7 +8,7 @@ export interface VehicleType {
 export interface Transaction {
   id: string;
   timestamp: string;
-  vehicleTypeId: string;
+  vehicleTypeId?: string;
   payableAmount: number;
   cashReceived: number;
   due: number;

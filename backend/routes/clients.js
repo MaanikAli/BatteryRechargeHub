@@ -98,17 +98,37 @@ router.post('/:id/transactions', async (req, res) => {
     const client = await Client.findOne({ id: req.params.id });
     if (!client) return res.status(404).json({ message: 'Client not found' });
 
-    const vehicleType = await VehicleType.findOne({ id: client.vehicleTypeId });
-    if (!vehicleType) return res.status(404).json({ message: 'Vehicle type not found' });
+    let payableAmount;
+    let vehicleTypeId = req.body.vehicleTypeId !== undefined ? req.body.vehicleTypeId : client.vehicleTypeId;
+
+    if (req.body.payableAmount !== undefined) {
+      payableAmount = req.body.payableAmount;
+    } else {
+      const vehicleType = await VehicleType.findOne({ id: vehicleTypeId });
+      if (!vehicleType) return res.status(404).json({ message: 'Vehicle type not found' });
+      payableAmount = vehicleType.chargingFee;
+    }
+
+    // Special handling for previous due (vehicleTypeId is null)
+    let cashReceived = req.body.cashReceived || 0;
+    let due;
+    if (vehicleTypeId === null && req.body.payableAmount !== undefined) {
+      // For previous due, set payableAmount to 0, cashReceived to 0, due to the input amount
+      payableAmount = 0;
+      cashReceived = 0;
+      due = req.body.payableAmount;
+    } else {
+      due = payableAmount - cashReceived;
+    }
 
     const transactionData = {
       id: req.body.id || uuidv4(),
       clientId: req.params.id,
       timestamp: req.body.timestamp || new Date().toISOString(),
-      vehicleTypeId: client.vehicleTypeId, // Automatically set from profile
-      payableAmount: vehicleType.chargingFee, // Calculate payable amount
-      cashReceived: req.body.cashReceived || 0,
-      due: vehicleType.chargingFee - (req.body.cashReceived || 0), // Calculate due properly
+      vehicleTypeId: vehicleTypeId || null,
+      payableAmount,
+      cashReceived,
+      due,
     };
 
     const transaction = new Transaction(transactionData);
@@ -139,9 +159,17 @@ router.put('/:id/transactions/:txId', async (req, res) => {
     // Update the transaction
     Object.assign(transaction, req.body);
 
-    // Recalculate due if cashReceived changed
-    if (req.body.cashReceived !== undefined) {
-      transaction.due = transaction.payableAmount - req.body.cashReceived;
+    // Special handling for previous due transactions
+    if (transaction.vehicleTypeId === null) {
+      // For previous due, due is not auto-recalculated; use provided due or keep existing
+      if (req.body.due !== undefined) {
+        transaction.due = req.body.due;
+      }
+    } else {
+      // For regular transactions, recalculate due if cashReceived changed
+      if (req.body.cashReceived !== undefined) {
+        transaction.due = transaction.payableAmount - req.body.cashReceived;
+      }
     }
 
     transaction.modifiedAt = new Date();

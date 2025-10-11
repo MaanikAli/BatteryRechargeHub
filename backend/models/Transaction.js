@@ -4,7 +4,7 @@ const transactionSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   clientId: { type: String, required: true },
   timestamp: { type: String, required: true },
-  vehicleTypeId: { type: String, required: true },
+  vehicleTypeId: { type: String, required: false },
   payableAmount: { type: Number, required: true },
   cashReceived: { type: Number, required: true },
   due: { type: Number, required: true },
