@@ -134,6 +134,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
     const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [sortKey, setSortKey] = useState<'timestamp' | 'payableAmount' | 'cashReceived' | 'due'>('timestamp');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [showAddPreviousDue, setShowAddPreviousDue] = useState(false);
 
     const totalDue = useMemo(() => {
         return client.transactions.reduce((acc, tx) => acc + tx.due, 0);
@@ -293,6 +294,14 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                         <span className="font-semibold text-red-800 dark:text-red-300">Total Outstanding Due</span>
                         <span className="text-2xl font-bold text-red-600 dark:text-red-400">৳{totalDue.toLocaleString()}</span>
                     </div>
+                    <div className="mt-4 flex justify-center">
+                        <button
+                            onClick={() => setShowAddPreviousDue(!showAddPreviousDue)}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                            {showAddPreviousDue ? 'Hide' : 'Show'} Add Previous Due
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -300,9 +309,11 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                         <AddTransactionForm client={client} vehicleTypes={vehicleTypes} onAddTransaction={handleAddTransaction} />
                     </div>
 
-                    <div className="lg:col-span-1">
-                        <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
-                    </div>
+                    {showAddPreviousDue && (
+                        <div className="lg:col-span-1">
+                            <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
+                        </div>
+                    )}
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><ReceiptIcon /> Transaction History</h3>

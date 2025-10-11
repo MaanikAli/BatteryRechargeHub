@@ -3,7 +3,6 @@ import { Client, VehicleType } from '../types';
 import { PlusIcon, UserIcon, SearchIcon, TrashIcon } from './Icons';
 import AddClientModal from './AddClientModal';
 import AddVehicleTypeModal from './AddVehicleTypeModal';
-import DeleteConrmationModal from './DeleteConfirmationModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -32,9 +31,38 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<'name' | 'createdAt' | 'due'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showVehicleTypes, setShowVehicleTypes] = useState(false);
+  const [showDuesOverview, setShowDuesOverview] = useState(true);
+  const [period, setPeriod] = useState<'all' | '1d' | '7d' | '30d' | '1y' | 'custom'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const now = new Date();
+  const getDateRange = () => {
+    if (period === 'all') return { start: null, end: null };
+    if (period === 'custom') {
+      return { start: startDate ? new Date(startDate) : null, end: endDate ? new Date(endDate + 'T23:59:59.999') : null };
+    }
+    const days = period === '1d' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : 365;
+    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    return { start, end: now };
+  };
+  const { start, end } = getDateRange();
+
+  const dateFilteredClients = useMemo(() => {
+    return clients.map(client => ({
+      ...client,
+      transactions: client.transactions.filter(tx => {
+        const txDate = new Date(tx.timestamp);
+        if (start && txDate < start) return false;
+        if (end && txDate > end) return false;
+        return true;
+      })
+    }));
+  }, [clients, start, end]);
 
   const filteredClients = useMemo(() => {
-    let result = clients.filter(client =>
+    let result = dateFilteredClients.filter(client =>
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.phone.includes(searchTerm)
     );
@@ -56,20 +84,26 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
       return 0;
     });
     return result;
-  }, [clients, searchTerm, sortKey, sortOrder]);
+  }, [dateFilteredClients, searchTerm, sortKey, sortOrder]);
   
   const totalDueAllClients = useMemo(() => {
-      return clients.reduce((total, client) => {
+      return dateFilteredClients.reduce((total, client) => {
           return total + client.transactions.reduce((sum, tx) => sum + tx.due, 0);
       }, 0);
-  }, [clients]);
+  }, [dateFilteredClients]);
+
+  const totalReceived = useMemo(() => {
+      return dateFilteredClients.reduce((total, client) => {
+          return total + client.transactions.reduce((sum, tx) => sum + tx.cashReceived, 0);
+      }, 0);
+  }, [dateFilteredClients]);
 
   const chartData = useMemo(() => {
-    return clients.map(client => ({
+    return dateFilteredClients.map(client => ({
       name: client.name.length > 10 ? client.name.substring(0, 10) + '...' : client.name,
       due: client.transactions.reduce((sum, tx) => sum + tx.due, 0)
     })).filter(item => item.due !== 0).slice(0, 10); // Top 10 with due > 0
-  }, [clients]);
+  }, [dateFilteredClients]);
 
   const getBarColor = (due: number) => {
     if (due >= 500) return '#dc2626'; // red-600
@@ -115,7 +149,42 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
             </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <label className="font-medium text-slate-700 dark:text-slate-300">Period:</label>
+            <select
+              value={period}
+              onChange={e => setPeriod(e.target.value as any)}
+              className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+            >
+              <option value="all">All Time</option>
+              <option value="1d">Last 1 Day</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="1y">Last 1 Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            {period === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                />
+                <span className="text-slate-700 dark:text-slate-300">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
@@ -125,6 +194,10 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
                 <p className={`text-2xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
             </div>
              <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
+                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Received</h3>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">৳{totalReceived.toLocaleString()}</p>
+            </div>
+             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Vehicle Types</h3>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{vehicleTypes.length}</p>
             </div>
@@ -132,20 +205,30 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
 
         {chartData.length > 0 && (
           <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Client Dues Overview</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`৳${value}`, 'Due']} />
-                <Bar dataKey="due">
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getBarColor(entry.due)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Client Dues Overview</h3>
+                <button
+                    onClick={() => setShowDuesOverview(!showDuesOverview)}
+                    className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+                >
+                    {showDuesOverview ? 'Hide' : 'Show'}
+                </button>
+            </div>
+            {showDuesOverview && (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`৳${value}`, 'Due']} />
+                    <Bar dataKey="due">
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getBarColor(entry.due)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+            )}
           </div>
         )}
 
@@ -235,8 +318,17 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
         </div>
 
         <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-3">Vehicle Types</h3>
-            <div className="space-y-2">
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Vehicle Types</h3>
+                <button
+                    onClick={() => setShowVehicleTypes(!showVehicleTypes)}
+                    className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+                >
+                    {showVehicleTypes ? 'Hide' : 'Show'}
+                </button>
+            </div>
+            {showVehicleTypes && (
+                <div className="space-y-2">
               {vehicleTypes.map(vt => (
                 <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
                   <div>
@@ -253,6 +345,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, onSel
                 </div>
               ))}
             </div>
+            )}
         </div>
       </div>
 
