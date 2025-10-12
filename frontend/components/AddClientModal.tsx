@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-// FIX: Imported `PlusIcon` which was missing and caused a compilation error.
 import { UserPlusIcon, XIcon, CameraIcon, PlusIcon } from './Icons';
 import { Client } from '../types';
+import ImageCropModal from './ImageCropModal';
 
 type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
 
@@ -19,16 +19,26 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ onClose, onAddClient, v
   const [address, setAddress] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState(vehicleTypes.length > 0 ? vehicleTypes[0].id : '');
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const imageSrc = reader.result as string;
+        setRawImageSrc(imageSrc);
+        setShowCropModal(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    setImagePreview(croppedImage);
+    setShowCropModal(false);
+    setRawImageSrc(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -144,6 +154,16 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ onClose, onAddClient, v
                 </button>
             </div>
         </form>
+        {showCropModal && rawImageSrc && (
+          <ImageCropModal
+            imageSrc={rawImageSrc}
+            onCropComplete={handleCropComplete}
+            onClose={() => {
+              setShowCropModal(false);
+              setRawImageSrc(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PencilIcon, XIcon, CameraIcon, PlusIcon } from './Icons';
 import { Client, VehicleType } from '../types';
+import ImageCropModal from './ImageCropModal';
 
 interface EditClientModalProps {
   client: Client;
@@ -17,16 +18,26 @@ const EditClientModal: React.FC<EditClientModalProps> = ({ client, onClose, onUp
   const [address, setAddress] = useState(client.address);
   const [vehicleTypeId, setVehicleTypeId] = useState(client.vehicleTypeId);
   const [imagePreview, setImagePreview] = useState<string | null>(client.imageUrl || null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const imageSrc = reader.result as string;
+        setRawImageSrc(imageSrc);
+        setShowCropModal(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    setImagePreview(croppedImage);
+    setShowCropModal(false);
+    setRawImageSrc(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -134,6 +145,16 @@ const EditClientModal: React.FC<EditClientModalProps> = ({ client, onClose, onUp
                 </button>
             </div>
         </form>
+        {showCropModal && rawImageSrc && (
+          <ImageCropModal
+            imageSrc={rawImageSrc}
+            onCropComplete={handleCropComplete}
+            onClose={() => {
+              setShowCropModal(false);
+              setRawImageSrc(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );
