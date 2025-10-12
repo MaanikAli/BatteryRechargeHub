@@ -56,12 +56,16 @@ const AppContent: React.FC = () => {
       isFetching = true;
       setIsRefreshing(true);
       try {
-        const [clientsData, vehicleTypesData] = await Promise.all([
+        const [clientsData, vehicleTypesData, fetchedTransactionsData] = await Promise.all([
           api.getClients(),
-          api.getVehicleTypes()
+          api.getVehicleTypes(),
+          transactionsData ? api.getTransactions({ page: transactionsData.currentPage, limit: 10, sortBy: transactionsSortKey, sortOrder: transactionsSortOrder }) : null
         ]);
         setClients(clientsData);
         setVehicleTypes(vehicleTypesData);
+        if (fetchedTransactionsData) {
+          setTransactionsData(fetchedTransactionsData);
+        }
       } catch (error) {
         console.error('Background refresh failed:', error);
       } finally {
@@ -70,7 +74,7 @@ const AppContent: React.FC = () => {
       }
     }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [isAuthenticated, isDataLoaded]);
+  }, [isAuthenticated, isDataLoaded, transactionsData?.currentPage, transactionsSortKey, transactionsSortOrder]);
 
   // Effect to handle online/offline status
   useEffect(() => {
