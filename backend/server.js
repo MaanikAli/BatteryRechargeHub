@@ -4,6 +4,9 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
+// Set time zone to Bangladesh (UTC+6)
+process.env.TZ = 'Asia/Dhaka';
+
 const Admin = require('./models/Admin');
 const auth = require('./middleware/auth');
 
