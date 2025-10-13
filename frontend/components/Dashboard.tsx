@@ -30,7 +30,7 @@ interface DashboardProps {
 }
 
 // Pagination page size constant (used by both Dashboard and DashboardSkeleton)
-export const PAGE_SIZE = 10;
+export const PAGE_SIZE = 5;
 
 const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, transactionsData, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType, onChangeTransactionsPage, onChangeTransactionsSort, transactionsSortKey, transactionsSortOrder }) => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
@@ -42,7 +42,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
   const [sortKey, setSortKey] = useState<'name' | 'createdAt' | 'due'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
-  const [showDuesOverview, setShowDuesOverview] = useState(true);
+  const [showDuesOverview, setShowDuesOverview] = useState(false);
   const [showTransactions, setShowTransactions] = useState(true);
   const [period, setPeriod] = useState<'all' | 'today' | '3d' | '7d' | '30d' | '1y' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
@@ -423,18 +423,32 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredTransactions.length > 0 ? filteredTransactions.map((tx, index) => (
-                        <tr key={tx.id} className={`${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200`}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{tx.clientName}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(tx.timestamp).toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{tx.type}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.payableAmount.toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.cashReceived.toLocaleString()}</td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                            ৳{tx.due.toLocaleString()}
-                          </td>
-                        </tr>
-                      )) : (
+                      {filteredTransactions.length > 0 ? filteredTransactions.map((tx, index) => {
+                        const txDate = new Date(tx.timestamp);
+                        const dayOfWeek = txDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                        const dateColors = [
+                          'bg-red-50 dark:bg-red-900',    // Sunday
+                          'bg-blue-50 dark:bg-blue-900',  // Monday
+                          'bg-green-50 dark:bg-green-900', // Tuesday
+                          'bg-yellow-50 dark:bg-yellow-900', // Wednesday
+                          'bg-purple-50 dark:bg-purple-900', // Thursday
+                          'bg-pink-50 dark:bg-pink-900',  // Friday
+                          'bg-indigo-50 dark:bg-indigo-900' // Saturday
+                        ];
+                        const dateColor = dateColors[dayOfWeek];
+                        return (
+                          <tr key={tx.id} className={`${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} ${dateColor} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200`}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{tx.clientName}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(tx.timestamp).toLocaleString()}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{tx.type}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.payableAmount.toLocaleString()}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.cashReceived.toLocaleString()}</td>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                              ৳{tx.due.toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      }) : (
                         <tr>
                           <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No transactions found.</td>
                         </tr>
