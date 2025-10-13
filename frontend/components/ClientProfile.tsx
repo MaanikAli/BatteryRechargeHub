@@ -406,7 +406,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                             </div>
                         </div>
                     </div>
-                     <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                     <div className="mt-6 grid grid-cols-3 gap-4">
                         <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-center">
                             <h4 className="font-semibold text-green-800 dark:text-green-300">Total Payment</h4>
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">৳{totalPayment.toLocaleString()}</p>

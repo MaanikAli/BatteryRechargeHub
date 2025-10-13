@@ -209,7 +209,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4">
             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
@@ -222,34 +222,6 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
                 <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Received</h3>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">৳{totalReceived.toLocaleString()}</p>
             </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
-            <h3
-                className="text-base font-bold text-slate-900 dark:text-white cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-3"
-                onClick={() => setShowVehicleTypes(!showVehicleTypes)}
-            >
-                Vehicle Types ({vehicleTypes.length})
-            </h3>
-            {showVehicleTypes && (
-                <div className="space-y-2">
-              {vehicleTypes.map(vt => (
-                <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
-                  <div>
-                    <p className="font-medium text-sm">{vt.name}</p>
-                    <p className="text-xs text-slate-500">৳{vt.chargingFee}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">Edit</button>
-                    <button onClick={() => {
-                      setVehicleTypeToDelete(vt);
-                      setIsDeleteModalOpen(true);
-                    }} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"><TrashIcon className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            )}
         </div>
 
         {chartData.length > 0 && (
@@ -491,6 +463,34 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
             )}
           </div>
         )}
+
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+            <h3
+                className="text-base font-bold text-slate-900 dark:text-white cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-3"
+                onClick={() => setShowVehicleTypes(!showVehicleTypes)}
+            >
+                Vehicle Types ({vehicleTypes.length})
+            </h3>
+            {showVehicleTypes && (
+                <div className="space-y-2">
+              {vehicleTypes.map(vt => (
+                <div key={vt.id} className="flex justify-between items-center p-2 border dark:border-slate-700 rounded">
+                  <div>
+                    <p className="font-medium text-sm">{vt.name}</p>
+                    <p className="text-xs text-slate-500">৳{vt.chargingFee}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => onEditVehicleType(vt)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">Edit</button>
+                    <button onClick={() => {
+                      setVehicleTypeToDelete(vt);
+                      setIsDeleteModalOpen(true);
+                    }} className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"><TrashIcon className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            )}
+        </div>
       </div>
 
       {isAddClientModalOpen && (
