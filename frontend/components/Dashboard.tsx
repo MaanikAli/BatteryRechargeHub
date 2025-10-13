@@ -440,7 +440,17 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
                           <tr key={tx.id} className={`${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} ${dateColor} hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200`}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{tx.clientName}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(tx.timestamp).toLocaleString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{tx.type}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {(() => {
+                                if (!tx.vehicleTypeId) {
+                                  return tx.cashReceived > 0 ? 'Custom Payment' : 'Previous Due';
+                                }
+                                const vehicleType = vehicleTypes.find(vt => vt.id === tx.vehicleTypeId);
+                                if (!vehicleType) return `Unknown (ID: ${tx.vehicleTypeId})`;
+                                const isCustom = tx.payableAmount !== vehicleType.chargingFee;
+                                return isCustom ? `${vehicleType.name} (Consider)` : vehicleType.name;
+                              })()}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.payableAmount.toLocaleString()}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">৳{tx.cashReceived.toLocaleString()}</td>
                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>

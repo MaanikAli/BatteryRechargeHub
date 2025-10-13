@@ -159,6 +159,79 @@ const AddTransactionForm: React.FC<{ client: Client; vehicleTypes: VehicleType[]
     );
 };
 
+const CustomPaymentForm: React.FC<{ client: Client; onAddCustomPayment: (tx: Omit<Transaction, 'id'>) => void }> = ({ client, onAddCustomPayment }) => {
+    const [payableAmount, setPayableAmount] = useState<string>('');
+    const [cashReceived, setCashReceived] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const payable = Number(payableAmount) || 0;
+    const cash = Number(cashReceived) || 0;
+    const due = payable - cash;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isSaving || payable <= 0) return;
+        setIsSaving(true);
+        await onAddCustomPayment({
+            timestamp: new Date().toISOString(),
+            vehicleTypeId: client.vehicleTypeId, // Use client's vehicle type
+            payableAmount: payable,
+            cashReceived: cash,
+            due,
+        });
+        setPayableAmount('');
+        setCashReceived('');
+        setTimeout(() => setIsSaving(false), 2000);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Custom Payment Collection</h3>
+            <div>
+                <label htmlFor="customPayableAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Payable Amount</label>
+                <input
+                    type="number"
+                    id="customPayableAmount"
+                    value={payableAmount}
+                    onChange={e => setPayableAmount(e.target.value)}
+                    placeholder="0"
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    min="0"
+                    step="0.01"
+                />
+            </div>
+            <div>
+                <label htmlFor="customCashReceived" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cash Received</label>
+                <input
+                    type="number"
+                    id="customCashReceived"
+                    value={cashReceived}
+                    onChange={e => setCashReceived(e.target.value)}
+                    placeholder="0"
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    min="0"
+                    step="0.01"
+                />
+            </div>
+            <div className="flex justify-between items-center text-sm p-3 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg">
+                <span className="font-medium text-indigo-800 dark:text-indigo-300">Current Due:</span>
+                <span className={`font-bold text-lg ${due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>৳{due.toLocaleString()}</span>
+            </div>
+            <button
+                type="submit"
+                disabled={isSaving || !payableAmount || Number(payableAmount) <= 0}
+                className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
+                    isSaving
+                        ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+            >
+                {isSaving ? 'Saving...' : 'Collect Payment'}
+            </button>
+        </form>
+    );
+};
+
 
 const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onBack, onUpdateClient, onDeleteClient }) => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -172,6 +245,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
     const [sortKey, setSortKey] = useState<'timestamp' | 'payableAmount' | 'cashReceived' | 'due'>('timestamp');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [showAddPreviousDue, setShowAddPreviousDue] = useState(false);
+    const [showCustomPayment, setShowCustomPayment] = useState(false);
 
     const totalDue = useMemo(() => {
         return client.transactions.reduce((acc, tx) => acc + tx.due, 0);
@@ -220,7 +294,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
 
     const handleAddTransaction = async (newTxData: Omit<Transaction, 'id'>) => {
         try {
-            const newTransaction = await api.addTransaction(client.id, { timestamp: newTxData.timestamp, cashReceived: newTxData.cashReceived });
+            const newTransaction = await api.addTransaction(client.id, newTxData);
             // Update local state by adding the new transaction
             const updatedClient = { ...client, transactions: [...client.transactions, newTransaction] };
             onUpdateClient(updatedClient);
@@ -352,6 +426,17 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1">
                         <AddTransactionForm client={client} vehicleTypes={vehicleTypes} onAddTransaction={handleAddTransaction} />
+                        <div className="flex justify-center">
+                            <button
+                                onClick={() => setShowCustomPayment(!showCustomPayment)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                            >
+                                {showCustomPayment ? 'Hide' : 'Show'} Custom Payment Collection
+                            </button>
+                        </div>
+                        {showCustomPayment && (
+                            <CustomPaymentForm client={client} onAddCustomPayment={handleAddTransaction} />
+                        )}
                     </div>
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
@@ -395,7 +480,15 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                               {new Date(tx.timestamp).toLocaleString()}
                                           </td>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                              {tx.vehicleTypeId ? vehicleTypes.find(vt => vt.id === tx.vehicleTypeId)?.name || `Unknown (ID: ${tx.vehicleTypeId})` : 'Previous Due'}
+                                              {(() => {
+                                                  if (!tx.vehicleTypeId) {
+                                                      return tx.cashReceived > 0 ? 'Custom Payment' : 'Previous Due';
+                                                  }
+                                                  const vehicleType = vehicleTypes.find(vt => vt.id === tx.vehicleTypeId);
+                                                  if (!vehicleType) return `Unknown (ID: ${tx.vehicleTypeId})`;
+                                                  const isCustom = tx.payableAmount !== vehicleType.chargingFee;
+                                                  return isCustom ? `${vehicleType.name} (Consider)` : vehicleType.name;
+                                              })()}
                                           </td>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-200 hidden sm:table-cell">
                                               ৳{tx.payableAmount.toLocaleString()}
