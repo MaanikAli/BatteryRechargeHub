@@ -147,9 +147,9 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
   
   return (
     <>
-      <div className="space-y-4">
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="space-y-1">
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-2">
+            <div className="flex flex-row justify-between items-center gap-3">
                 <div>
                     <h1 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage clients & payments</p>
@@ -160,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
                       className="bg-sky-500 text-white px-3 py-1 rounded-md font-medium text-xs hover:bg-sky-600 transition-colors flex items-center gap-1"
                     >
                       <PlusIcon className="w-3 h-3" />
-                      Type
+                      Vehicle
                     </button>
                     <button
                       onClick={() => setIsAddClientModalOpen(true)}
@@ -173,13 +173,13 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
             </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-2">
           <div className="flex flex-wrap gap-2 items-center">
             <label className="font-medium text-slate-700 dark:text-slate-300">Period:</label>
             <select
               value={period}
               onChange={e => setPeriod(e.target.value as any)}
-              className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+              className="px-1 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -209,25 +209,29 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
-            </div>
-             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Due</h3>
-                <p className={`text-2xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
-            </div>
-             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Received</h3>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">৳{totalReceived.toLocaleString()}</p>
+                <div className="flex justify-between items-center">
+                    <div className="text-center">
+                        <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Clients</h3>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{clients.length}</p>
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Due</h3>
+                        <p className={`text-2xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Cash Received</h3>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">৳{totalReceived.toLocaleString()}</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         {chartData.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Client Dues Overview</h3>
+          <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-2">
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">Client Dues Overview</h4>
                 <button
                     onClick={() => setShowDuesOverview(!showDuesOverview)}
                     className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-600"
@@ -253,21 +257,21 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-4">
+        <div className="bg-white dark:bg-slate-800 shadow-md rounded-lg p-2">
             <div className="relative mb-4">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <SearchIcon />
                 </div>
                 <input
                     type="text"
-                    placeholder="Search by name or phone..."
+                    placeholder="Search by name ..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div className="flex flex-wrap items-center gap-3 mb-4 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
               <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sort by:</span>
               <select
                 value={sortKey}
