@@ -260,7 +260,9 @@ const AppContent: React.FC = () => {
       console.error('Failed to fetch sorted transactions:', error);
     }
   };
-
+  if(isAuthenticated === "loading") {
+  return (null); // or a loading 
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }

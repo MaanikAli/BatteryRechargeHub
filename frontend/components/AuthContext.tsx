@@ -22,7 +22,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState("loading");
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,7 +48,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     setIsAuthenticated(false);
   };
-
+if (!isAuthenticated) {
+    console.log('User is not authenticated');
+  }
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout, token }}>
       {children}
