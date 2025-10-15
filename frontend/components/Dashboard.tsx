@@ -44,6 +44,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const [showDuesOverview, setShowDuesOverview] = useState(false);
   const [showTransactions, setShowTransactions] = useState(true);
+  const [showRechargeStats, setShowRechargeStats] = useState(false);
   const [period, setPeriod] = useState<'all' | 'today' | '3d' | '7d' | '30d' | '1y' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -115,6 +116,25 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
       }, 0);
   }, [dateFilteredClients]);
 
+  const rechargeStats = useMemo(() => {
+    const totalRecharges = dateFilteredClients.reduce((total, client) => {
+      return total + client.transactions.filter(tx => tx.vehicleTypeId).length;
+    }, 0);
+    const typeCounts: { [key: string]: number } = {};
+    dateFilteredClients.forEach(client => {
+      client.transactions.forEach(tx => {
+        if (tx.vehicleTypeId) {
+          typeCounts[tx.vehicleTypeId] = (typeCounts[tx.vehicleTypeId] || 0) + 1;
+        }
+      });
+    });
+    const breakdown = Object.entries(typeCounts).map(([id, count]) => {
+      const vehicleType = vehicleTypes.find(vt => vt.id === id);
+      return { name: vehicleType ? vehicleType.name : `Unknown (${id})`, count };
+    }).sort((a, b) => b.count - a.count);
+    return { totalRecharges, breakdown };
+  }, [dateFilteredClients, vehicleTypes]);
+
   const chartData = useMemo(() => {
     return dateFilteredClients.map(client => ({
       name: client.name.length > 10 ? client.name.substring(0, 10) + '...' : client.name,
@@ -123,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
   }, [dateFilteredClients]);
 
   const getBarColor = (due: number) => {
-    if (due >= 500) return '#dc2626'; // red-600
+    if (due >= 500) return '#ff0404ff'; // red-600
     if (due >=100) return '#ffda05ee'; // orange-600
     if (due >= 50) return '#16a34a'; // green-600
     if (due < -1000) return '#2675dcff'; // red for large negative
@@ -226,6 +246,29 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
                     </div>
                 </div>
             </div>
+            {transactionsData && (
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md cursor-pointer" onClick={() => setShowRechargeStats(!showRechargeStats)}>
+                    <div className="flex justify-between items-center">
+                        <div className="text-center">
+                            <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Vehicle Recharges</h3>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{rechargeStats.totalRecharges}</p>
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Breakdown by Type</h3>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">Click to {showRechargeStats ? 'hide' : 'show'}</p>
+                        </div>
+                    </div>
+                    {showRechargeStats && (
+                        <div className="mt-4 space-y-1">
+                            {rechargeStats.breakdown.map((item, index) => (
+                                <p key={index} className="text-sm text-slate-700 dark:text-slate-300">
+                                    {item.name}: {item.count}
+                                </p>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
 
         {chartData.length > 0 && (
