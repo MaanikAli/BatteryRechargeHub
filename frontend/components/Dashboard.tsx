@@ -31,7 +31,7 @@ interface DashboardProps {
 }
 
 // Pagination page size constant (used by both Dashboard and DashboardSkeleton)
-export const PAGE_SIZE = 5;
+export const PAGE_SIZE = 10;
 
 const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, transactionsData, onSelectClient, onAddClient, onAddVehicleType, onEditVehicleType, onDeleteVehicleType, onChangeTransactionsPage, onChangeTransactionsSort, transactionsSortKey, transactionsSortOrder }) => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
@@ -40,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
   const [vehicleTypeToDelete, setVehicleTypeToDelete] = useState<VehicleType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortKey, setSortKey] = useState<'name' | 'createdAt' | 'due'>('createdAt');
+  const [sortKey, setSortKey] = useState<'name' | 'createdAt' | 'due' | 'rechargeCount'>('rechargeCount');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showVehicleTypes, setShowVehicleTypes] = useState(false);
   const [showDuesOverview, setShowDuesOverview] = useState(false);
@@ -99,6 +99,10 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
         const aDue = a.transactions.reduce((sum, tx) => sum + Math.max(0, tx.due), 0);
         const bDue = b.transactions.reduce((sum, tx) => sum + Math.max(0, tx.due), 0);
         return sortOrder === 'asc' ? aDue - bDue : bDue - aDue;
+      } else if (sortKey === 'rechargeCount') {
+        const aCount = a.transactions.filter(tx => tx.vehicleTypeId).length;
+        const bCount = b.transactions.filter(tx => tx.vehicleTypeId).length;
+        return sortOrder === 'asc' ? aCount - bCount : bCount - aCount;
       }
       return 0;
     });
@@ -337,9 +341,10 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
               <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Sort by:</span>
               <select
                 value={sortKey}
-                onChange={e => setSortKey(e.target.value as 'name' | 'createdAt' | 'due')}
+                onChange={e => setSortKey(e.target.value as 'name' | 'createdAt' | 'due' | 'rechargeCount')}
                 className="px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
               >
+                <option value="rechargeCount">Recharge Count</option>
                 <option value="createdAt">Created Date</option>
                 <option value="name">Name</option>
                 <option value="due">Total Due</option>

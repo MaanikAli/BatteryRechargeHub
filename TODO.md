@@ -1,6 +1,4 @@
-# TODO: Add Vehicle Recharge Stats to Dashboard
-
-## Steps to Complete
-- [x] Compute total recharges and breakdown by vehicle type using useMemo
-- [x] Add new section in Dashboard.tsx JSX to display total recharges and per-type counts
-- [x] Verify the changes render correctly in the app (frontend dev server started)
+- [ ] Update default sortKey to 'rechargeCount' in Dashboard.tsx
+- [ ] Add 'Recharge Count' option to the sort select dropdown
+- [ ] Implement sorting logic for 'rechargeCount' based on number of vehicle recharges (transactions with vehicleTypeId)
+- [ ] Test the sorting functionality in the dashboard
