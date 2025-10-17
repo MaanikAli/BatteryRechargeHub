@@ -5,6 +5,7 @@ import AddClientModal from './AddClientModal';
 import AddVehicleTypeModal from './AddVehicleTypeModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useTheme } from './ThemeContext';
 
 // The data structure for creating a new client, excluding server-generated fields
 type AddClientData = Omit<Client, 'id' | 'transactions' | 'createdAt'>;
@@ -135,9 +136,12 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
     return { totalRecharges, breakdown };
   }, [dateFilteredClients, vehicleTypes]);
 
+  const { isDark } = useTheme();
+
   const chartData = useMemo(() => {
     return dateFilteredClients.map(client => ({
       name: client.name.length > 10 ? client.name.substring(0, 10) + '...' : client.name,
+      fullName: client.name,
       due: client.transactions.reduce((sum, tx) => sum + tx.due, 0)
     })).filter(item => item.due > 0).sort((a, b) => b.due - a.due).slice(0, 50); // Top 10 with highest due > 0
   }, [dateFilteredClients]);
@@ -285,10 +289,25 @@ const Dashboard: React.FC<DashboardProps> = memo(({ clients, vehicleTypes, trans
             {showDuesOverview && (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`৳${value}`, 'Due']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
+                    <XAxis dataKey="name" tick={{ fill: 'currentColor' }} />
+                    <YAxis tick={{ fill: 'currentColor' }} />
+                    <Tooltip
+                      formatter={(value, name, props) => [`৳${value}`, 'Due']}
+                      labelFormatter={(label, payload) => {
+                        if (payload && payload[0]) {
+                          return payload[0].payload.fullName;
+                        }
+                        return label;
+                      }}
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        border: `1px solid ${isDark ? '#475569' : '#cbd5e1'}`,
+                        borderRadius: '0.375rem',
+                        color: isDark ? '#ffffff' : '#000000',
+                        fontWeight: 'bold'
+                      }}
+                    />
                     <Bar dataKey="due">
                       {chartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getBarColor(entry.due)} />
