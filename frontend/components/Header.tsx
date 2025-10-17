@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth } from './AuthContext';
-import { useTheme } from './ThemeContext';
 
 interface HeaderProps {
   onAdminProfile: () => void;
@@ -8,7 +7,6 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAdminProfile }) => {
   const { logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
 
   return (
     <header className="bg-gradient-to-r from-blue-500 to-purple-600 shadow-md sticky top-0 z-40">
@@ -18,12 +16,6 @@ const Header: React.FC<HeaderProps> = ({ onAdminProfile }) => {
             Riaz's ReCharge Hub
           </h1>
           <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="px-3 py-1.5 text-sm font-semibold bg-white/20 text-white rounded hover:bg-white/30"
-            >
-              {isDark ? 'Light' : 'Dark'}
-            </button>
             <button
               onClick={onAdminProfile}
               className="px-3 py-1.5 text-sm font-semibold bg-white/20 text-white rounded hover:bg-white/30"
