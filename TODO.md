@@ -1,4 +1,4 @@
-- [ ] Update default sortKey to 'rechargeCount' in Dashboard.tsx
-- [ ] Add 'Recharge Count' option to the sort select dropdown
-- [ ] Implement sorting logic for 'rechargeCount' based on number of vehicle recharges (transactions with vehicleTypeId)
-- [ ] Test the sorting functionality in the dashboard
+- [x] Update default sortKey to 'rechargeCount' in Dashboard.tsx
+- [x] Add 'Recharge Count' option to the sort select dropdown
+- [x] Implement sorting logic for 'rechargeCount' based on number of vehicle recharges (transactions with vehicleTypeId)
+- [x] Test the sorting functionality in the dashboard

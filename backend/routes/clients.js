@@ -185,7 +185,7 @@ router.post('/:id/transactions', async (req, res) => {
     const transactionData = {
       id: req.body.id || uuidv4(),
       clientId: req.params.id,
-      timestamp: req.body.timestamp || new Date().toISOString(),
+      timestamp: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().replace('Z', '+06:00'),
       vehicleTypeId: vehicleTypeId || null,
       payableAmount,
       cashReceived,
