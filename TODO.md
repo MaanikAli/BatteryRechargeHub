@@ -1,6 +1,11 @@
-# TODO: Set title.png as title icon and logo
+# TODO: Update Adjust Due Feature
 
-- [x] Update Header.tsx to add logo image using title.png
-- [x] Remove gradient from navigation bar
-- [x] Expand logo size 2x
-- [x] Move admin and logout buttons inside admin profile icon dropdown
+## Tasks
+- [ ] Rename "Add Previous Due" to "Adjust Due" in ClientProfile.tsx
+- [ ] Update form labels and descriptions to reflect adjustment (positive or negative)
+- [ ] Remove min="0" from input to allow negative amounts
+- [ ] Update backend logic in clients.js to handle negative due amounts for reduction
+- [ ] Test the functionality to ensure negative amounts reduce client due
+
+## Progress
+- Started implementation

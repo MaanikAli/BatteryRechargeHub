@@ -16,46 +16,45 @@ interface ClientProfileProps {
   onDeleteClient: (clientId: string) => void;
 }
 
-const AddPreviousDueForm: React.FC<{ onAddPreviousDue: (amount: number) => void }> = ({ onAddPreviousDue }) => {
+const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number) => void }> = ({ onAdjustDue }) => {
     const [amount, setAmount] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const dueAmount = Number(amount);
-        if (isNaN(dueAmount) || dueAmount <= 0 || isSaving) return;
+        if (isNaN(dueAmount) || isSaving) return;
         setIsSaving(true);
-        await onAddPreviousDue(dueAmount);
+        await onAdjustDue(dueAmount);
         setAmount('');
         setTimeout(() => setIsSaving(false), 2000);
     };
 
     return (
         <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Add Previous Due</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Adjust Due</h3>
             <div>
-                <label htmlFor="previousDueAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Previous Due Amount</label>
+                <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Due Adjustment Amount</label>
                 <input
                     type="number"
-                    id="previousDueAmount"
+                    id="dueAdjustmentAmount"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    placeholder="0"
+                    placeholder="0 (positive to add, negative to reduce)"
                     className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    min="0"
                     step="0.01"
                 />
             </div>
             <button
                 type="submit"
-                disabled={isSaving || !amount || Number(amount) <= 0}
+                disabled={isSaving || !amount}
                 className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
                     isSaving
                         ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
             >
-                {isSaving ? 'Adding...' : 'Add Previous Due'}
+                {isSaving ? 'Adjusting...' : 'Adjust Due'}
             </button>
         </form>
     );
@@ -244,7 +243,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
     const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [sortKey, setSortKey] = useState<'timestamp' | 'payableAmount' | 'cashReceived' | 'due'>('timestamp');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-    const [showAddPreviousDue, setShowAddPreviousDue] = useState(false);
+    const [showAdjustDue, setShowAdjustDue] = useState(false);
     const [showCustomPayment, setShowCustomPayment] = useState(false);
 
     const totalDue = useMemo(() => {
@@ -537,15 +536,15 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
 
                 <div className="flex justify-center">
                     <button
-                        onClick={() => setShowAddPreviousDue(!showAddPreviousDue)}
+                        onClick={() => setShowAdjustDue(!showAdjustDue)}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
                     >
-                        {showAddPreviousDue ? 'Hide' : 'Show'} Add Previous Due
+                        {showAdjustDue ? 'Hide' : 'Show'} Adjust Due
                     </button>
                 </div>
 
-                {showAddPreviousDue && (
-                    <AddPreviousDueForm onAddPreviousDue={handleAddPreviousDue} />
+                {showAdjustDue && (
+                    <AdjustDueForm onAdjustDue={handleAddPreviousDue} />
                 )}
             </div>
             {isEditModalOpen && (
