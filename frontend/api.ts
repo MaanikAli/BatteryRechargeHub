@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'https://batteryrechargehubbackend.onrender.com/api', // Adjust the baseURL as needed
+  baseURL: 'http://localhost:5002/api', // Adjust the baseURL as needed
   headers: {
     'Content-Type': 'application/json',
   },
@@ -110,6 +110,27 @@ export const api = {
     if (params.sortBy) query.append('sortBy', params.sortBy);
     if (params.sortOrder) query.append('sortOrder', params.sortOrder);
     const response = await apiClient.get(`/clients/transactions?${query.toString()}`);
+    return response.data;
+  },
+
+  // Trash
+  getTrash: async () => {
+    const response = await apiClient.get('/clients/trash');
+    return response.data;
+  },
+
+  restoreFromTrash: async (id: string) => {
+    const response = await apiClient.put(`/clients/trash/${id}/restore`);
+    return response.data;
+  },
+
+  restoreTransactionFromTrash: async (txId: string) => {
+    const response = await apiClient.put(`/clients/trash/transactions/${txId}/restore`);
+    return response.data;
+  },
+
+  permanentDeleteFromTrash: async (id: string) => {
+    const response = await apiClient.delete(`/clients/trash/${id}`);
     return response.data;
   },
 };

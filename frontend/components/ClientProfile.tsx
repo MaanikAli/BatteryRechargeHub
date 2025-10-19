@@ -32,7 +32,7 @@ const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number) => void }> = ({ on
 
     return (
         <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Adjust Due</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Due Adjustment</h3>
             <div>
                 <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Due Adjustment Amount</label>
                 <input
@@ -302,13 +302,13 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         }
     };
 
-    const handleAddPreviousDue = async (amount: number) => {
+    const handleAdjustDue = async (amount: number) => {
         try {
             const newTransaction = await api.addTransaction(client.id, { timestamp: new Date().toISOString(), cashReceived: 0, payableAmount: amount, vehicleTypeId: null });
             const updatedClient = { ...client, transactions: [...client.transactions, newTransaction] };
             onUpdateClient(updatedClient);
         } catch (error) {
-            console.error('Failed to add previous due:', error);
+            console.error('Failed to adjust due:', error);
         }
     };
 
@@ -544,7 +544,7 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                 </div>
 
                 {showAdjustDue && (
-                    <AdjustDueForm onAdjustDue={handleAddPreviousDue} />
+                    <AdjustDueForm onAdjustDue={handleAdjustDue} />
                 )}
             </div>
             {isEditModalOpen && (

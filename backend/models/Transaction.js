@@ -9,6 +9,7 @@ const transactionSchema = new mongoose.Schema({
   cashReceived: { type: Number, required: true },
   due: { type: Number, required: true },
   modifiedAt: { type: Date, default: Date.now },
+  deleted: { type: Boolean, default: false },
 });
 
 // Add index on clientId for faster queries

@@ -3,13 +3,14 @@ const Client = require('../models/Client.js');
 const Transaction = require('../models/Transaction.js');
 const VehicleType = require('../models/VehicleType.js'); // Import VehicleType model
 const { v4: uuidv4 } = require('uuid'); // Import uuid library
+
 const router = express.Router();
 
 // GET all clients
 router.get('/', async (req, res) => {
   try {
-    const clients = await Client.find();
-    const transactions = await Transaction.find();
+    const clients = await Client.find({ deleted: { $ne: true } });
+    const transactions = await Transaction.find({ deleted: { $ne: true } });
     const transactionsByClient = transactions.reduce((acc, tx) => {
       if (!acc[tx.clientId]) acc[tx.clientId] = [];
       acc[tx.clientId].push(tx);
@@ -52,8 +53,8 @@ router.get('/transactions', async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const totalTransactions = await Transaction.countDocuments();
-    const transactions = await Transaction.find()
+    const totalTransactions = await Transaction.countDocuments({ deleted: { $ne: true } });
+    const transactions = await Transaction.find({ deleted: { $ne: true } })
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(limit);
@@ -81,6 +82,86 @@ router.get('/transactions', async (req, res) => {
       totalPages,
       totalTransactions
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET trash data
+router.get('/trash', async (req, res) => {
+  try {
+    const deletedClients = await Client.find({ deleted: true });
+    const deletedTransactions = await Transaction.find({ deleted: true });
+
+    // Add clientName to transactions
+    const transactionsWithClientName = await Promise.all(deletedTransactions.map(async tx => {
+      const client = await Client.findOne({ id: tx.clientId });
+      let type = 'Previous Due';
+      if (tx.vehicleTypeId) {
+        const vehicleType = await VehicleType.findOne({ id: tx.vehicleTypeId });
+        type = vehicleType ? vehicleType.name : 'Unknown';
+      }
+      return {
+        ...tx.toObject(),
+        clientName: client ? client.name : 'Unknown',
+        type
+      };
+    }));
+
+    res.json({
+      clients: deletedClients,
+      transactions: transactionsWithClientName
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT restore client from trash
+router.put('/trash/:id/restore', async (req, res) => {
+  try {
+    const client = await Client.findOneAndUpdate(
+      { id: req.params.id, deleted: true },
+      { deleted: false },
+      { new: true }
+    );
+    if (!client) return res.status(404).json({ message: 'Client not found in trash' });
+
+    // Restore all transactions associated with the client
+    await Transaction.updateMany({ clientId: req.params.id, deleted: true }, { deleted: false });
+
+    res.json({ message: 'Client and associated transactions restored' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT restore transaction from trash
+router.put('/trash/transactions/:txId/restore', async (req, res) => {
+  try {
+    const transaction = await Transaction.findOneAndUpdate(
+      { id: req.params.txId, deleted: true },
+      { deleted: false },
+      { new: true }
+    );
+    if (!transaction) return res.status(404).json({ message: 'Transaction not found in trash' });
+
+    res.json({ message: 'Transaction restored' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE permanently delete client from trash
+router.delete('/trash/:id', async (req, res) => {
+  try {
+    const client = await Client.findOneAndDelete({ id: req.params.id, deleted: true });
+    if (!client) return res.status(404).json({ message: 'Client not found in trash' });
+
+    // Permanently delete all transactions associated with the client
+    await Transaction.deleteMany({ clientId: req.params.id, deleted: true });
+
+    res.json({ message: 'Client and associated transactions permanently deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -140,14 +221,18 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE a client
+// DELETE a client (soft delete)
 router.delete('/:id', async (req, res) => {
   try {
-    const client = await Client.findOneAndDelete({ id: req.params.id });
+    const client = await Client.findOneAndUpdate(
+      { id: req.params.id },
+      { deleted: true },
+      { new: true }
+    );
     if (!client) return res.status(404).json({ message: 'Client not found' });
-    // Delete all transactions associated with the client
-    await Transaction.deleteMany({ clientId: req.params.id });
-    res.json({ message: 'Client and associated transactions deleted' });
+    // Soft delete all transactions associated with the client
+    await Transaction.updateMany({ clientId: req.params.id }, { deleted: true });
+    res.json({ message: 'Client and associated transactions moved to trash' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -244,16 +329,20 @@ router.put('/:id/transactions/:txId', async (req, res) => {
   }
 });
 
-// DELETE a transaction
+// DELETE a transaction (soft delete)
 router.delete('/:id/transactions/:txId', async (req, res) => {
   try {
     const client = await Client.findOne({ id: req.params.id });
     if (!client) return res.status(404).json({ message: 'Client not found' });
 
-    const transaction = await Transaction.findOneAndDelete({ id: req.params.txId, clientId: req.params.id });
+    const transaction = await Transaction.findOneAndUpdate(
+      { id: req.params.txId, clientId: req.params.id },
+      { deleted: true },
+      { new: true }
+    );
     if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-    res.json({ message: 'Transaction deleted' });
+    res.json({ message: 'Transaction moved to trash' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

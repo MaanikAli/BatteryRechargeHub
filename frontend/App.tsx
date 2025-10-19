@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import ClientProfile from './components/ClientProfile';
 import Header from './components/Header';
 import EditVehicleTypeModal from './components/EditVehicleTypeModal';
+import TrashPage from './components/TrashPage';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import Login from './components/Login';
@@ -167,7 +168,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Optimistic UI update for deleting client
+  // Optimistic UI update for deleting client (soft delete)
   const deleteClient = async (clientId: string) => {
     setClients(prevClients => prevClients.filter(client => client.id !== clientId));
     try {
@@ -359,6 +360,7 @@ const AppWithRoutes: React.FC = () => {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/" element={<AppContent />} />
         <Route path="/client/:name/:phone" element={<AppContent />} />
+        <Route path="/trash" element={isAuthenticated ? <TrashPage /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         {/* Add more routes here, e.g. /profile, /settings, etc. */}
       </Routes>

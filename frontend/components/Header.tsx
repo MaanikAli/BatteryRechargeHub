@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { UserIcon } from './Icons';
+import { UserIcon, TrashIcon } from './Icons';
 import logo from '../src/assets/logo.png';
 
 interface HeaderProps {
@@ -25,36 +25,48 @@ const Header: React.FC<HeaderProps> = ({ onAdminProfile }) => {
               </h1>
             </button>
           </div>
-          <div className="relative">
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold bg-white/20 text-white rounded hover:bg-white/30"
-            >
-              <UserIcon className="h-5 w-5" />
-              
-            </button>
-            {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-                <button
-                  onClick={() => {
-                    onAdminProfile();
-                    setIsDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Admin Profile
-                </button>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold bg-white/20 text-white rounded hover:bg-white/30"
+              >
+                <UserIcon className="h-5 w-5" />
+
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                  <button
+                    onClick={() => {
+                      onAdminProfile();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Admin Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate('/trash');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <TrashIcon className="h-4 w-4 inline mr-2" />
+                    Trash Bin
+                  </button>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsDropdownOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

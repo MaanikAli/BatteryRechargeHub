@@ -20,6 +20,7 @@ const clientSchema = new mongoose.Schema({
   imageUrl: { type: String },
   transactions: [transactionSchema],
   createdAt: { type: String, required: true },
+  deleted: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model('Client', clientSchema);

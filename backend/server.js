@@ -38,6 +38,12 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/clients', require('./routes/clients'));
 app.use('/api/vehicleTypes', require('./routes/vehicleTypes'));
 
+// Welcome endpoint
+app.get('/api/welcome', (req, res) => {
+  console.log(`Request received: ${req.method} ${req.path}`);
+  res.json({ message: 'Welcome to the Battery Recharge Hub API!' });
+});
+
 // Public routes for viewing data JSON without auth
 app.get('/api/public/vehicleTypes', async (req, res) => {
   console.log('Public vehicleTypes route hit');
