@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { UserIcon } from './Icons';
 import logo from '../src/assets/logo.png';
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAdminProfile }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
@@ -16,10 +18,12 @@ const Header: React.FC<HeaderProps> = ({ onAdminProfile }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Logo" className="h-16 w-16" />
-            <h1 className="text-xl font-bold text-white">
-              Riaz's ReCharge Station
-            </h1>
+            <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src={logo} alt="Logo" className="h-16 w-16" />
+              <h1 className="text-xl font-bold text-white">
+                Riaz's ReCharge Station
+              </h1>
+            </button>
           </div>
           <div className="relative">
             <button
