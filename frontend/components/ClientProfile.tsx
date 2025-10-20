@@ -470,6 +470,17 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                         {showCustomPayment && (
                             <CustomPaymentForm client={client} onAddCustomPayment={handleAddTransaction} />
                         )}
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={() => setShowAdjustDue(!showAdjustDue)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                            >
+                                {showAdjustDue ? 'Hide' : 'Show'} Adjust Due
+                            </button>
+                        </div>
+                        {showAdjustDue && (
+                            <AdjustDueForm onAdjustDue={handleAdjustDue} />
+                        )}
                     </div>
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
@@ -572,19 +583,6 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                )}
-
-                <div className="flex justify-center">
-                    <button
-                        onClick={() => setShowAdjustDue(!showAdjustDue)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                    >
-                        {showAdjustDue ? 'Hide' : 'Show'} Adjust Due
-                    </button>
-                </div>
-
-                {showAdjustDue && (
-                    <AdjustDueForm onAdjustDue={handleAdjustDue} />
                 )}
             </div>
             {isEditModalOpen && (
