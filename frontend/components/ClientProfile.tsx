@@ -16,16 +16,17 @@ interface ClientProfileProps {
   onDeleteClient: (clientId: string) => void;
 }
 
-const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number) => void }> = ({ onAdjustDue }) => {
+const AdjustDueForm: React.FC<{ onAdjustDue: (adjustment: { type: 'add' | 'reduce'; amount: number }) => void }> = ({ onAdjustDue }) => {
     const [amount, setAmount] = useState<string>('');
+    const [adjustmentType, setAdjustmentType] = useState<'add' | 'reduce'>('add');
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const dueAmount = Number(amount);
-        if (isNaN(dueAmount) || isSaving) return;
+        const adjAmount = Number(amount);
+        if (isNaN(adjAmount) || adjAmount <= 0 || isSaving) return;
         setIsSaving(true);
-        await onAdjustDue(dueAmount);
+        await onAdjustDue({ type: adjustmentType, amount: adjAmount });
         setAmount('');
         setTimeout(() => setIsSaving(false), 2000);
     };
@@ -34,20 +35,33 @@ const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number) => void }> = ({ on
         <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Due Adjustment</h3>
             <div>
-                <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Due Adjustment Amount</label>
+                <label htmlFor="adjustmentType" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Adjustment Type</label>
+                <select
+                    id="adjustmentType"
+                    value={adjustmentType}
+                    onChange={e => setAdjustmentType(e.target.value as 'add' | 'reduce')}
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                    <option value="add">Add Due</option>
+                    <option value="reduce">Reduce Due</option>
+                </select>
+            </div>
+            <div>
+                <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
                 <input
                     type="number"
                     id="dueAdjustmentAmount"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    placeholder="0 (positive to add, negative to reduce)"
-                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="Enter amount"
+                    min="0.01"
                     step="0.01"
+                    className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
             </div>
             <button
                 type="submit"
-                disabled={isSaving || !amount}
+                disabled={isSaving || !amount || Number(amount) <= 0}
                 className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
                     isSaving
                         ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
@@ -302,9 +316,29 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         }
     };
 
-    const handleAdjustDue = async (amount: number) => {
+    const handleAdjustDue = async (adjustment: { type: 'add' | 'reduce'; amount: number }) => {
         try {
-            const newTransaction = await api.addTransaction(client.id, { timestamp: new Date().toISOString(), cashReceived: 0, payableAmount: amount, vehicleTypeId: null });
+            let transactionData: Omit<Transaction, 'id'>;
+            if (adjustment.type === 'add') {
+                // Add due: payableAmount = amount, cashReceived = 0, due = amount
+                transactionData = {
+                    timestamp: new Date().toISOString(),
+                    vehicleTypeId: null,
+                    payableAmount: adjustment.amount,
+                    cashReceived: 0,
+                    due: adjustment.amount,
+                };
+            } else {
+                // Reduce due: payableAmount = 0, cashReceived = amount, due = -amount
+                transactionData = {
+                    timestamp: new Date().toISOString(),
+                    vehicleTypeId: null,
+                    payableAmount: 0,
+                    cashReceived: adjustment.amount,
+                    due: -adjustment.amount,
+                };
+            }
+            const newTransaction = await api.addTransaction(client.id, transactionData);
             const updatedClient = { ...client, transactions: [...client.transactions, newTransaction] };
             onUpdateClient(updatedClient);
         } catch (error) {
@@ -481,7 +515,13 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                           <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                               {(() => {
                                                   if (!tx.vehicleTypeId) {
-                                                      return tx.cashReceived > 0 ? 'Custom Payment' : 'Previous Due';
+                                                      if (tx.cashReceived > 0) {
+                                                          return 'Payment';
+                                                      } else if (tx.due > 0) {
+                                                          return 'Add Due';
+                                                      } else {
+                                                          return 'Adjustment';
+                                                      }
                                                   }
                                                   const vehicleType = vehicleTypes.find(vt => vt.id === tx.vehicleTypeId);
                                                   if (!vehicleType) return `Unknown (ID: ${tx.vehicleTypeId})`;

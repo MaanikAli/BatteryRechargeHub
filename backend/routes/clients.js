@@ -255,17 +255,8 @@ router.post('/:id/transactions', async (req, res) => {
       payableAmount = vehicleType.chargingFee;
     }
 
-    // Special handling for previous due (vehicleTypeId is null)
     let cashReceived = req.body.cashReceived || 0;
-    let due;
-    if (vehicleTypeId === null && req.body.payableAmount !== undefined) {
-      // For previous due, set payableAmount to 0, cashReceived to 0, due to the input amount
-      payableAmount = 0;
-      cashReceived = 0;
-      due = req.body.payableAmount;
-    } else {
-      due = payableAmount - cashReceived;
-    }
+    let due = payableAmount - cashReceived;
 
     const transactionData = {
       id: req.body.id || uuidv4(),
