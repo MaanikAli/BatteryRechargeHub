@@ -16,47 +16,69 @@ interface ClientProfileProps {
   onDeleteClient: (clientId: string) => void;
 }
 
-const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number) => void }> = ({ onAdjustDue }) => {
+const AdjustDueForm: React.FC<{ onAdjustDue: (amount: number, type: 'add' | 'reduce') => void }> = ({ onAdjustDue }) => {
     const [amount, setAmount] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddDue = async () => {
         const dueAmount = Number(amount);
-        if (isNaN(dueAmount) || isSaving) return;
+        if (isNaN(dueAmount) || dueAmount <= 0 || isSaving) return;
         setIsSaving(true);
-        await onAdjustDue(dueAmount);
+        await onAdjustDue(dueAmount, 'add');
+        setAmount('');
+        setTimeout(() => setIsSaving(false), 2000);
+    };
+
+    const handleReduceDue = async () => {
+        const dueAmount = Number(amount);
+        if (isNaN(dueAmount) || dueAmount <= 0 || isSaving) return;
+        setIsSaving(true);
+        await onAdjustDue(dueAmount, 'reduce');
         setAmount('');
         setTimeout(() => setIsSaving(false), 2000);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
+        <div className="p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md space-y-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><PlusIcon/> Due Adjustment</h3>
             <div>
-                <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Due Adjustment Amount</label>
+                <label htmlFor="dueAdjustmentAmount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
                 <input
                     type="number"
                     id="dueAdjustmentAmount"
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
-                    placeholder="0 (positive to add, negative to reduce)"
+                    placeholder="Enter amount"
                     className="mt-1 block w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     step="0.01"
+                    min="0"
                 />
             </div>
-            <button
-                type="submit"
-                disabled={isSaving || !amount}
-                className={`w-full py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
-                    isSaving
-                        ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
-            >
-                {isSaving ? 'Adjusting...' : 'Adjust Due'}
-            </button>
-        </form>
+            <div className="flex gap-2">
+                <button
+                    onClick={handleAddDue}
+                    disabled={isSaving || !amount || Number(amount) <= 0}
+                    className={`flex-1 py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
+                        isSaving
+                            ? 'bg-indigo-400 cursor-not-allowed text-white animate-pulse'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    }`}
+                >
+                    {isSaving ? 'Adding...' : 'Add Due'}
+                </button>
+                <button
+                    onClick={handleReduceDue}
+                    disabled={isSaving || !amount || Number(amount) <= 0}
+                    className={`flex-1 py-2 px-4 rounded-md font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors ${
+                        isSaving
+                            ? 'bg-green-400 cursor-not-allowed text-white animate-pulse'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                >
+                    {isSaving ? 'Reducing...' : 'Reduce Due'}
+                </button>
+            </div>
+        </div>
     );
 };
 
@@ -302,9 +324,12 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
         }
     };
 
-    const handleAdjustDue = async (amount: number) => {
+    const handleAdjustDue = async (amount: number, type: 'add' | 'reduce') => {
         try {
-            const newTransaction = await api.addTransaction(client.id, { timestamp: new Date().toISOString(), cashReceived: 0, payableAmount: amount, vehicleTypeId: null });
+            const transactionData = type === 'add'
+                ? { timestamp: new Date().toISOString(), cashReceived: 0, payableAmount: amount, vehicleTypeId: null }
+                : { timestamp: new Date().toISOString(), cashReceived: amount, payableAmount: 0, vehicleTypeId: null };
+            const newTransaction = await api.addTransaction(client.id, transactionData);
             const updatedClient = { ...client, transactions: [...client.transactions, newTransaction] };
             onUpdateClient(updatedClient);
         } catch (error) {
@@ -425,7 +450,18 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1">
                         <AddTransactionForm client={client} vehicleTypes={vehicleTypes} onAddTransaction={handleAddTransaction} />
-                        <div className="flex justify-center">
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={() => setShowAdjustDue(!showAdjustDue)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                            >
+                                {showAdjustDue ? 'Hide' : 'Show'} Adjust Due
+                            </button>
+                        </div>
+                        {showAdjustDue && (
+                            <AdjustDueForm onAdjustDue={handleAdjustDue} />
+                        )}
+                        <div className="flex justify-center mt-4">
                             <button
                                 onClick={() => setShowCustomPayment(!showCustomPayment)}
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"

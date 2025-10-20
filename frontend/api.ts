@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5002/api', // Adjust the baseURL as needed
+  baseURL: 'https://batteryrechargehubbackend.onrender.com/api', // Adjust the baseURL as needed
+  //baseURL: 'http://localhost:5002/api', // Adjust the baseURL as needed
   headers: {
     'Content-Type': 'application/json',
   },
